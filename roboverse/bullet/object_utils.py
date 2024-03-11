@@ -170,7 +170,7 @@ def load_object(object_name, object_position, object_quat, scale=1.0):
                                   baseOrientation=object_quat,
                                   globalScaling=scale)
     else:
-        print(object_name)
+        print("test", object_name)
         raise NotImplementedError
 
 

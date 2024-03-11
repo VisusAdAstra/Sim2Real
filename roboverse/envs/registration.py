@@ -47,8 +47,8 @@ ENVIRONMENT_SPECS = (
         'entry_point': 'roboverse.envs.widow250:Widow250MultiObjectEnv',
         'kwargs': {'reward_type': 'grasping',
                    'control_mode': 'discrete_gripper',
-                   'possible_objects': GRASP_TRAIN_OBJECTS,
-                   'num_objects': 2,
+                   'possible_objects': ['shed'],
+                   'num_objects': 1,
 
                    'load_tray': False,
                    'object_position_high': (.68, .25, -.30),
@@ -297,8 +297,8 @@ ENVIRONMENT_SPECS = (
         'kwargs': {'reward_type': 'pick_place',
                    'control_mode': 'discrete_gripper',
 
-                   'possible_objects': PICK_PLACE_TRAIN_OBJECTS,
-                   'num_objects': 2,
+                   'possible_objects': ['shed'],
+                   'num_objects': 1,
                    'load_tray': False,
                    'object_position_low': (.5, .18, -.30),
                    'object_position_high': (.7, .27, -.30),
