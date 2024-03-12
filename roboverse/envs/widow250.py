@@ -273,7 +273,7 @@ class Widow250Env(gym.Env, Serializable):
         reward = self.get_reward(info)
         done = False
         truncated = False
-        return self.get_observation(), reward, done, truncated, info
+        return self.get_observation(), reward, done, info #truncated, 
 
     def get_observation(self):
         gripper_state = self.get_gripper_state()
