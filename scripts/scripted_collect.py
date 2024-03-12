@@ -113,6 +113,7 @@ def main(args):
         if success:
             if args.gui:
                 print("num_timesteps: ", num_steps)
+                #print(traj["observations"])
             data.append(traj)
             num_success += 1
             num_saved += 1
