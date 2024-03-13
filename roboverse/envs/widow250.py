@@ -180,6 +180,7 @@ class Widow250Env(gym.Env, Serializable):
             bullet.step_simulation(self.num_sim_steps_reset)
 
     def reset(self, target=None, seed=None, options=None):
+        self.num_steps = 0
         bullet.reset()
         bullet.setup_headless()
         self._load_meshes()
@@ -192,7 +193,7 @@ class Widow250Env(gym.Env, Serializable):
         return self.get_observation(), self.get_info()
 
     def step(self, action):
-
+        self.num_steps += 1
         # TODO Clean this up
         if np.isnan(np.sum(action)):
             print('action', action)
@@ -271,7 +272,11 @@ class Widow250Env(gym.Env, Serializable):
 
         info = self.get_info()
         reward = self.get_reward(info)
-        done = False
+        if self.num_steps > 150:
+            done = True
+            self.reset()
+        else:
+            done = False
         truncated = False
         return self.get_observation(), reward, done, info #truncated, 
 
