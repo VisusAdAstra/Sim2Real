@@ -196,7 +196,7 @@ class Widow250Env(gym.Env, Serializable):
         self.num_steps += 1
         # TODO Clean this up
         if np.isnan(np.sum(action)):
-            #print('action', action)
+            print('action', action)
             raise RuntimeError('Action has NaN entries')
 
         action = np.clip(action, -1, +1)  # TODO Clean this up
