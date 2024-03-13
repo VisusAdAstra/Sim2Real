@@ -272,7 +272,7 @@ class Widow250Env(gym.Env, Serializable):
 
         info = self.get_info()
         reward = self.get_reward(info)
-        if self.num_steps > 150:
+        if self.num_steps > 100:
             done = True
             self.reset()
         else:

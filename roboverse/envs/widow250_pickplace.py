@@ -104,6 +104,7 @@ class Widow250PickPlaceEnv(Widow250Env):
             reward = float(info['grasp_success_target'])
         else:
             raise NotImplementedError
+        print(reward)
         return reward
 
     def get_info(self):
