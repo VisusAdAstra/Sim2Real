@@ -290,6 +290,7 @@ class Widow250Env(gym.Env, Serializable):
         if self.observation_mode == 'pixels':
             image_observation = self.render_obs()
             image_observation = np.float32(image_observation.flatten()) / 255.0
+            image_observation = np.uint8(image_observation * 255.)
             observation = {
                 'object_position': object_position,
                 'object_orientation': object_orientation,

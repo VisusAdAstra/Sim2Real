@@ -3,13 +3,13 @@ import roboverse
 from roboverse.policies import policies
 
 
-def collect_data(env, model, num_trajectories=100, num_timesteps=30):
-    policy_class = policies["grasp"]
+def collect_data(env, model, policy, target, num_trajectories=100, num_timesteps=30):
+    policy_class = policies[policy]
     policy = policy_class(env)
     num_success = 0
     num_saved = 0
     num_attempts = 0
-    accept_trajectory_key = "grasp_success_target"
+    accept_trajectory_key = target
     noise = 0.1
     EPSILON = 0.1
 
@@ -24,23 +24,22 @@ def collect_data(env, model, num_trajectories=100, num_timesteps=30):
 
             # In case we need to pad actions by 1 for easier realNVP modelling 
             env_action_dim = env.action_space.shape[0]
-            if env_action_dim - action.shape[0] == 1:
-                action = np.append(action, 0)
+            #if env_action_dim - action.shape[0] == 1:
+            #    action = np.append(action, 0)
             action += np.random.normal(scale=noise, size=(env_action_dim,))
             action = np.clip(action, -1 + EPSILON, 1 - EPSILON)
             observation = env.get_observation()
-            #observation["image"] = np.uint8(observation["image"] * 255.)
             next_observation, reward, done, info = env.step(action)
-            #next_observation = np.uint8(next_observation["image"] * 255.)
-            rewards.append(reward)
             if not info[accept_trajectory_key]:
-                reward += 0.99**(num_timesteps-j)
+                reward += 0.99**(num_timesteps-j)/10
+            rewards.append(reward)
             model.replay_buffer.add(observation, next_observation, action, reward, done, [{}])
 
             if info[accept_trajectory_key] and num_steps < 0:
                 num_steps = j
-                break
 
+            if info[accept_trajectory_key] and j > 20:
+                break
             if done or agent_info['done']:
                 break
 
@@ -72,22 +71,23 @@ obs = env.reset()
 n_actions = env.action_space.shape[-1]
 action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
 
-model = TD3("MultiInputPolicy", env, buffer_size=100000, action_noise=action_noise, verbose=1, learning_starts=0)
-collect_data(env, model, 10, 30)
-model.save_replay_buffer("data/td3_expert_grasp")
+model = TD3("MultiInputPolicy", env, buffer_size=100000, verbose=1, learning_starts=0) #, action_noise=action_noise
+# collect_data(env, model, "grasp", "grasp_success_target", 100, 30)
+# model.save_replay_buffer("data/td3_expert_grasp1")
+# collect_data(env, model, "grasp", "grasp_success_target", 100, 30)
+# model.save_replay_buffer("data/td3_expert_grasp2")
 
 print("start learning")
-for i in range(3):
+for i in range(4):
     model.replay_buffer.reset()
-    model.load_replay_buffer("data/td3_expert_grasp")
-    model.learn(total_timesteps=5000, log_interval=10, progress_bar=True)
+    model.load_replay_buffer(f"data/td3_expert_grasp{i%2+1}")
+    model.learn(total_timesteps=2000, log_interval=10, progress_bar=True)
 print("finish learning")
 model.save("data/td3")
 vec_env = model.get_env()
 
-del model # remove to demonstrate saving and loading
-
-model = TD3.load("data/td3")
+#del model # remove to demonstrate saving and loading
+#model = TD3.load("data/td3")
 
 obs = vec_env.reset()
 print("start render")
