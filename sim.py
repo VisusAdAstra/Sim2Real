@@ -61,6 +61,7 @@ from stable_baselines3 import TD3
 from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
 
 
+COLLECT = False
 #env = gym.make("Pendulum-v1", render_mode="rgb_array")
 env = roboverse.make("Widow250PickPlace-v1",
                          gui=False,
@@ -71,23 +72,42 @@ obs = env.reset()
 n_actions = env.action_space.shape[-1]
 action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
 
-model = TD3("MultiInputPolicy", env, buffer_size=100000, verbose=1, learning_starts=0) #, action_noise=action_noise
-# collect_data(env, model, "grasp", "grasp_success_target", 100, 30)
-# model.save_replay_buffer("data/td3_expert_grasp1")
-# collect_data(env, model, "grasp", "grasp_success_target", 100, 30)
-# model.save_replay_buffer("data/td3_expert_grasp2")
+model = TD3("MultiInputPolicy", env, buffer_size=20000, tensorboard_log="data/td3",verbose=1, learning_starts=0) #, action_noise=action_noise
+if COLLECT:
+    for i in range(2):
+        collect_data(env, model, "grasp", "grasp_success_target", 250, 30)
+        model.save_replay_buffer(f"data/td3_expert_grasp{i+1}")
 
-print("start learning")
-for i in range(4):
+if not COLLECT:
     model.replay_buffer.reset()
-    model.load_replay_buffer(f"data/td3_expert_grasp{i%2+1}")
-    model.learn(total_timesteps=2000, log_interval=10, progress_bar=True)
-print("finish learning")
-model.save("data/td3")
-vec_env = model.get_env()
+    model.load_replay_buffer(f"data/td3_expert_grasp1")
+    model.learn(total_timesteps=0, log_interval=5, tb_log_name="exp", progress_bar=True)
+    
+    print("start pre-training from buffer only")
+    for i in range(2):
+        model.replay_buffer.reset()
+        model.load_replay_buffer(f"data/td3_expert_grasp{i%2+1}")
+        model.train(gradient_steps=5000, batch_size=256)
 
-#del model # remove to demonstrate saving and loading
-#model = TD3.load("data/td3")
+    print("start learning")
+    for i in range(4):
+        model.replay_buffer.reset()
+        model.load_replay_buffer(f"data/td3_expert_grasp1")
+        model.load_replay_buffer(f"data/td3_expert_grasp2")
+        model.learn(total_timesteps=2500, log_interval=5, tb_log_name="exp", progress_bar=True)
+
+    print("finish learning")
+    model.save("data/td3")
+
+
+# start env with gui
+env.close()
+env = roboverse.make("Widow250PickPlace-v1",
+                         gui=True,
+                         transpose_image=False)
+obs = env.reset()
+model.set_env(env)
+vec_env = model.get_env()
 
 obs = vec_env.reset()
 print("start render")
