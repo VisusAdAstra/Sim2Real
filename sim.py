@@ -79,10 +79,6 @@ if COLLECT:
         model.save_replay_buffer(f"data/td3_expert_grasp{i+1}")
 
 if not COLLECT:
-    model.replay_buffer.reset()
-    model.load_replay_buffer(f"data/td3_expert_grasp1")
-    model.learn(total_timesteps=0, log_interval=5, tb_log_name="exp", progress_bar=True)
-    
     print("start pre-training from buffer only")
     for i in range(2):
         model.replay_buffer.reset()
