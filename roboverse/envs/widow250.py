@@ -6,6 +6,9 @@ import roboverse.bullet as bullet
 from roboverse.envs import objects
 from roboverse.bullet import object_utils
 from .multi_object import MultiObjectEnv
+from collections import deque
+from typing import Union
+from gym.error import DependencyNotInstalled
 
 END_EFFECTOR_INDEX = 8
 RESET_JOINT_VALUES = [1.57, -0.6, -0.6, 0, -1.57, 0., 0., 0.036, -0.036]
@@ -88,8 +91,6 @@ class Widow250Env(gym.Env, Serializable):
         self.neutral_gripper_open = neutral_gripper_open
 
         self.gui = gui
-
-        from collections import deque
         self.num_stack = 4
         self.lz4_compress = True
         self.frames = deque(maxlen=4)
@@ -197,7 +198,8 @@ class Widow250Env(gym.Env, Serializable):
 
         obs = self.get_observation()
         [self.frames.append(obs["image"]) for _ in range(self.num_stack)]
-        return obs, self.get_info()
+        observation = self.get_observation_stacked()
+        return observation, self.get_info()
 
     def step(self, action):
         self.num_steps += 1
@@ -279,15 +281,15 @@ class Widow250Env(gym.Env, Serializable):
 
         info = self.get_info()
         reward = self.get_reward(info)
-        observation = self.get_observation()
-        self.frames.append(observation["image"])
+        obs = self.get_observation()
+        self.frames.append(obs["image"])
         if self.num_steps > 100:
             done = True
             self.reset()
         else:
             done = False
         truncated = False
-        return observation, reward, done, info #truncated, 
+        return self.get_observation_stacked(), reward, done, info #truncated, 
 
     def get_observation(self):
         gripper_state = self.get_gripper_state()
@@ -321,7 +323,7 @@ class Widow250Env(gym.Env, Serializable):
             self.objects[self.target_object])
         if self.observation_mode == 'pixels':
             assert len(self.frames) == self.num_stack, (len(self.frames), self.num_stack)
-            image_observation = LazyFrames(list(self.frames), self.lz4_compress)
+            image_observation = np.array(LazyFrames(list(self.frames), self.lz4_compress))
             observation = {
                 'object_position': object_position,
                 'object_orientation': object_orientation,
@@ -375,7 +377,7 @@ class Widow250Env(gym.Env, Serializable):
     def _set_observation_space(self):
         if self.observation_mode == 'pixels':
             self.image_length = (self.observation_img_dim ** 2) * 3
-            img_space = gym.spaces.Box(0, 1, (self.image_length,),
+            img_space = gym.spaces.Box(0, 1, (4, self.image_length,),
                                        dtype=np.float32)
             robot_state_dim = 10  # XYZ + QUAT + GRIPPER_STATE
             obs_bound = 100
