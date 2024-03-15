@@ -89,6 +89,11 @@ class Widow250Env(gym.Env, Serializable):
 
         self.gui = gui
 
+        from collections import deque
+        self.num_stack = 4
+        self.lz4_compress = True
+        self.frames = deque(maxlen=4)
+
         # TODO(avi): This hard-coding should be removed
         self.fc_input_key = 'state'
         self.cnn_input_key = 'image'
@@ -190,7 +195,9 @@ class Widow250Env(gym.Env, Serializable):
             self.reset_joint_values)
         self.is_gripper_open = True  # TODO(avi): Clean this up
 
-        return self.get_observation(), self.get_info()
+        obs = self.get_observation()
+        [self.frames.append(obs["image"]) for _ in range(self.num_stack)]
+        return obs, self.get_info()
 
     def step(self, action):
         self.num_steps += 1
@@ -272,13 +279,15 @@ class Widow250Env(gym.Env, Serializable):
 
         info = self.get_info()
         reward = self.get_reward(info)
+        observation = self.get_observation()
+        self.frames.append(observation["image"])
         if self.num_steps > 100:
             done = True
             self.reset()
         else:
             done = False
         truncated = False
-        return self.get_observation(), reward, done, info #truncated, 
+        return observation, reward, done, info #truncated, 
 
     def get_observation(self):
         gripper_state = self.get_gripper_state()
@@ -291,6 +300,28 @@ class Widow250Env(gym.Env, Serializable):
             image_observation = self.render_obs()
             image_observation = np.float32(image_observation.flatten()) / 255.0
             image_observation = np.uint8(image_observation * 255.)
+            observation = {
+                'object_position': object_position,
+                'object_orientation': object_orientation,
+                'state': np.concatenate(
+                    (ee_pos, ee_quat, gripper_state, gripper_binary_state)),
+                'image': image_observation
+            }
+        else:
+            raise NotImplementedError
+
+        return observation
+    
+    def get_observation_stacked(self):
+        gripper_state = self.get_gripper_state()
+        gripper_binary_state = [float(self.is_gripper_open)]
+        ee_pos, ee_quat = bullet.get_link_state(
+            self.robot_id, self.end_effector_index)
+        object_position, object_orientation = bullet.get_object_position(
+            self.objects[self.target_object])
+        if self.observation_mode == 'pixels':
+            assert len(self.frames) == self.num_stack, (len(self.frames), self.num_stack)
+            image_observation = LazyFrames(list(self.frames), self.lz4_compress)
             observation = {
                 'object_position': object_position,
                 'object_orientation': object_orientation,
@@ -393,3 +424,91 @@ if __name__ == "__main__":
         time.sleep(0.1)
 
     env.reset()
+
+
+class LazyFrames:
+    """Ensures common frames are only stored once to optimize memory use.
+
+    To further reduce the memory use, it is optionally to turn on lz4 to compress the observations.
+
+    Note:
+        This object should only be converted to numpy array just before forward pass.
+    """
+
+    __slots__ = ("frame_shape", "dtype", "shape", "lz4_compress", "_frames")
+
+    def __init__(self, frames: list, lz4_compress: bool = False):
+        """Lazyframe for a set of frames and if to apply lz4.
+
+        Args:
+            frames (list): The frames to convert to lazy frames
+            lz4_compress (bool): Use lz4 to compress the frames internally
+
+        Raises:
+            DependencyNotInstalled: lz4 is not installed
+        """
+        self.frame_shape = tuple(frames[0].shape)
+        self.shape = (len(frames),) + self.frame_shape
+        self.dtype = frames[0].dtype
+        if lz4_compress:
+            try:
+                from lz4.block import compress
+            except ImportError as e:
+                raise DependencyNotInstalled(
+                    "lz4 is not installed, run `pip install gymnasium[other]`"
+                ) from e
+
+            frames = [compress(frame) for frame in frames]
+        self._frames = frames
+        self.lz4_compress = lz4_compress
+
+    def __array__(self, dtype=None):
+        """Gets a numpy array of stacked frames with specific dtype.
+
+        Args:
+            dtype: The dtype of the stacked frames
+
+        Returns:
+            The array of stacked frames with dtype
+        """
+        arr = self[:]
+        if dtype is not None:
+            return arr.astype(dtype)
+        return arr
+
+    def __len__(self):
+        """Returns the number of frame stacks.
+
+        Returns:
+            The number of frame stacks
+        """
+        return self.shape[0]
+
+    def __getitem__(self, int_or_slice: Union[int, slice]):
+        """Gets the stacked frames for a particular index or slice.
+
+        Args:
+            int_or_slice: Index or slice to get items for
+
+        Returns:
+            np.stacked frames for the int or slice
+
+        """
+        if isinstance(int_or_slice, int):
+            return self._check_decompress(self._frames[int_or_slice])  # single frame
+        return np.stack(
+            [self._check_decompress(f) for f in self._frames[int_or_slice]], axis=0
+        )
+
+    def __eq__(self, other):
+        """Checks that the current frames are equal to the other object."""
+        return self.__array__() == other
+
+    def _check_decompress(self, frame):
+        if self.lz4_compress:
+            from lz4.block import decompress
+
+            return np.frombuffer(decompress(frame), dtype=self.dtype).reshape(
+                self.frame_shape
+            )
+        return frame
