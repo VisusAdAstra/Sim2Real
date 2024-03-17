@@ -1,5 +1,6 @@
 import gym
 import numpy as np
+import time
 
 from roboverse.bullet.serializable import Serializable
 import roboverse.bullet as bullet
@@ -283,9 +284,10 @@ class Widow250Env(gym.Env, Serializable):
         reward = self.get_reward(info)
         obs = self.get_observation()
         self.frames.append(obs["image"])
-        if self.num_steps > 100:
+        if self.num_steps > 198:
             done = True
             self.reset()
+            time.sleep(1)
         else:
             done = False
         truncated = False
@@ -300,8 +302,8 @@ class Widow250Env(gym.Env, Serializable):
             self.objects[self.target_object])
         if self.observation_mode == 'pixels':
             image_observation = self.render_obs()
-            image_observation = np.float32(image_observation.flatten()) / 255.0
-            image_observation = np.uint8(image_observation * 255.)
+            image_observation = np.float32(image_observation) / 255.0 #.flatten()
+            image_observation = np.uint8(image_observation * 255.) #from collect
             observation = {
                 'object_position': object_position,
                 'object_orientation': object_orientation,
@@ -376,9 +378,9 @@ class Widow250Env(gym.Env, Serializable):
 
     def _set_observation_space(self):
         if self.observation_mode == 'pixels':
-            self.image_length = (self.observation_img_dim ** 2) * 3
-            img_space = gym.spaces.Box(0, 1, (4, self.image_length,),
-                                       dtype=np.float32)
+            self.image_length = (self.observation_img_dim, self.observation_img_dim, 3) #(self.observation_img_dim ** 2) * 3
+            #img_space = gym.spaces.Box(0, 1, (4, self.image_length,), dtype=np.float32)
+            img_space = gym.spaces.Box(0, 1, (4, *self.image_length,), dtype=np.uint8)
             robot_state_dim = 10  # XYZ + QUAT + GRIPPER_STATE
             obs_bound = 100
             obs_high = np.ones(robot_state_dim) * obs_bound
