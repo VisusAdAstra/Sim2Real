@@ -200,6 +200,7 @@ class Widow250Env(gym.Env, Serializable):
         obs = self.get_observation()
         [self.frames.append(obs["image"]) for _ in range(self.num_stack)]
         observation = self.get_observation_stacked()
+        time.sleep(0.1)
         return observation, self.get_info()
 
     def step(self, action):
@@ -286,8 +287,6 @@ class Widow250Env(gym.Env, Serializable):
         self.frames.append(obs["image"])
         if self.num_steps > 198:
             done = True
-            self.reset()
-            time.sleep(1)
         else:
             done = False
         truncated = False
