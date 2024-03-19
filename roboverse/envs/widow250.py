@@ -92,9 +92,9 @@ class Widow250Env(gym.Env, Serializable):
         self.neutral_gripper_open = neutral_gripper_open
 
         self.gui = gui
-        self.num_stack = 4
+        self.num_stack = 2
         self.lz4_compress = True
-        self.frames = deque(maxlen=4)
+        self.frames = deque(maxlen=self.num_stack)
 
         # TODO(avi): This hard-coding should be removed
         self.fc_input_key = 'state'
@@ -379,7 +379,7 @@ class Widow250Env(gym.Env, Serializable):
         if self.observation_mode == 'pixels':
             self.image_length = (self.observation_img_dim, self.observation_img_dim, 3) #(self.observation_img_dim ** 2) * 3
             #img_space = gym.spaces.Box(0, 1, (4, self.image_length,), dtype=np.float32)
-            img_space = gym.spaces.Box(0, 1, (4, *self.image_length,), dtype=np.uint8)
+            img_space = gym.spaces.Box(0, 1, (self.num_stack, *self.image_length,), dtype=np.uint8)
             robot_state_dim = 10  # XYZ + QUAT + GRIPPER_STATE
             obs_bound = 100
             obs_high = np.ones(robot_state_dim) * obs_bound
