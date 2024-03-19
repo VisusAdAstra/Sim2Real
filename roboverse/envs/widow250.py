@@ -285,7 +285,7 @@ class Widow250Env(gym.Env, Serializable):
         reward = self.get_reward(info)
         obs = self.get_observation()
         self.frames.append(obs["image"])
-        if self.num_steps > 198:
+        if self.num_steps > 98:
             done = True
         else:
             done = False
