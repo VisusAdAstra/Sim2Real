@@ -159,10 +159,11 @@ ENVIRONMENT_SPECS = (
                    'object_scales': (0.7,),
                    'target_object': 'shed',
                    'load_tray': False,
-                   'object_position_low': (.49, .18, -.30),
-                   'object_position_high': (.59, .27, -.30),
+                   'object_position_low': (.45, .18, -.30),
+                   'object_position_high': (.54, .27, -.30),
 
                    'container_name': 'tray',
+                   #'fixed_container_position': True,
 
 
                    }
@@ -177,10 +178,11 @@ ENVIRONMENT_SPECS = (
                    'object_scales': (0.7,),
                    'target_object': 'shed',
                    'load_tray': False,
-                   'object_position_low': (.49, .18, -.30),
-                   'object_position_high': (.59, .27, -.30),
+                   'object_position_low': (.45, .18, -.30),
+                   'object_position_high': (.54, .27, -.30),
 
                    'container_name': 'tray',
+                   'fixed_container_position': True,
 
 
                    }
