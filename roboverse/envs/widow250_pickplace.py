@@ -101,7 +101,7 @@ class Widow250PickPlaceEnv(Widow250Env):
         if self.reward_type == 'pick_place':
             reward = float(info['place_success_target'])
         elif self.reward_type == 'grasp':
-            reward = float(info['grasp_success_target'])
+            reward = float(100 if(info['grasp_success_target']) else -1)
         else:
             raise NotImplementedError
         return reward

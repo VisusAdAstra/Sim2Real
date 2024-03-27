@@ -170,6 +170,9 @@ class Widow250Env(gym.Env, Serializable):
             self.reset_joint_values)
         self.is_gripper_open = True  # TODO(avi): Clean this up
 
+        self.num_steps = 0
+        import time
+        time.sleep(0.1)
         return self.get_observation(), self.get_info()
 
     def step(self, action):
@@ -257,7 +260,13 @@ class Widow250Env(gym.Env, Serializable):
         reward = self.get_reward(info)
         done = self.done
         truncated = False
-        return self.get_observation(), reward, done, truncated, info
+        self.num_steps += 1
+        if self.num_steps > 98:
+            done = True
+        else:
+            done = False
+        #return self.get_observation(), reward, done, truncated, info
+        return self.get_observation(), reward, done, info
 
     def get_observation(self):
         gripper_state = self.get_gripper_state()
@@ -268,7 +277,9 @@ class Widow250Env(gym.Env, Serializable):
             self.objects[self.target_object])
         if self.observation_mode == 'pixels':
             image_observation = self.render_obs()
-            image_observation = np.float32(image_observation.flatten()) / 255.0
+            #image_observation = np.float32(image_observation.flatten()) / 255.0
+            image_observation = np.float32(image_observation) / 255.
+            image_observation = np.uint8(image_observation * 255.)
             observation = {
                 'object_position': object_position,
                 'object_orientation': object_orientation,
@@ -333,9 +344,10 @@ class Widow250Env(gym.Env, Serializable):
 
     def _set_observation_space(self):
         if self.observation_mode == 'pixels':
-            self.image_length = (self.observation_img_dim ** 2) * 3
-            img_space = gym.spaces.Box(0, 1, (self.image_length,),
-                                       dtype=np.float32)
+            #self.image_length = (self.observation_img_dim ** 2) * 3
+            self.image_length = (self.observation_img_dim, self.observation_img_dim, 3)
+            #img_space = gym.spaces.Box(0, 1, (self.image_length,), dtype=np.float32)
+            img_space = gym.spaces.Box(0, 255, (*self.image_length,), dtype=np.uint8)
             robot_state_dim = 10  # XYZ + QUAT + GRIPPER_STATE
             obs_bound = 100
             obs_high = np.ones(robot_state_dim) * obs_bound
