@@ -127,6 +127,21 @@ class Widow250Env(gym.Env, Serializable):
         self.reset()
         self.ee_pos_init, self.ee_quat_init = bullet.get_link_state(
             self.robot_id, self.end_effector_index)
+        
+    from typing import Any, Dict
+    def compute_reward(self, achieved_goal, desired_goal, info: Dict[str, Any]) -> np.ndarray:
+        self.sparse = True
+        self.distance_threshold = 0.05
+        d = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
+        if self.sparse:
+            return -np.array(d > self.distance_threshold, dtype=np.float32)
+        else:
+            return -d.astype(np.float32)
+        
+    def is_success(self, achieved_goal: np.ndarray, desired_goal: np.ndarray) -> np.ndarray:
+        self.distance_threshold = 0.05
+        d = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
+        return np.array(d < self.distance_threshold, dtype=bool)
 
     def _load_meshes(self, target_position=None):
         self.table_id = objects.table()
