@@ -5,6 +5,18 @@ from roboverse.assets.shapenet_object_lists \
 
 ENVIRONMENT_SPECS = (
     {
+        'id': 'Widow250EEPosition-v0',
+        'entry_point': 'roboverse.envs.widow250_eeposition:Widow250EEPositionEnv',
+        'kwargs': {'reward_type': 'ee_position',
+                   'control_mode': 'no_gripper',
+                   'target_object': 'sphere',
+                   'object_names': ('sphere',),
+                   'object_scales': (0.7,),
+                   'load_tray': False,
+                   'xyz_action_scale': 0.2,
+                   }
+    },
+    {
         'id': 'Widow250Grasp-v0',
         'entry_point': 'roboverse.envs.widow250:Widow250Env',
         'kwargs': {'reward_type': 'grasping',
@@ -47,8 +59,8 @@ ENVIRONMENT_SPECS = (
         'entry_point': 'roboverse.envs.widow250:Widow250MultiObjectEnv',
         'kwargs': {'reward_type': 'grasping',
                    'control_mode': 'discrete_gripper',
-                   'possible_objects': ['shed'],
-                   'num_objects': 1,
+                   'possible_objects': GRASP_TRAIN_OBJECTS,
+                   'num_objects': 2,
 
                    'load_tray': False,
                    'object_position_high': (.68, .25, -.30),
@@ -162,25 +174,7 @@ ENVIRONMENT_SPECS = (
                    'object_position_low': (.49, .18, -.30),
                    'object_position_high': (.59, .27, -.30),
 
-                   'container_name': 'tray',
-
-
-                   }
-    },
-    {
-        'id': 'Widow250PickPlaceMultiObject-v0',
-        'entry_point': 'roboverse.envs.widow250_pickplace:Widow250PickPlaceEnv',
-        'kwargs': {'reward_type': 'pick_place',
-                   'control_mode': 'discrete_gripper',
-
-                   'object_names': ('shed', 'gatorade',),
-                   'object_scales': (0.7, 0.5,),
-                   'target_object': 'shed',
-                   'load_tray': False,
-                   'object_position_low': (.49, .18, -.30),
-                   'object_position_high': (.59, .27, -.30),
-
-                   'container_name': 'tray',
+                   'container_name': 'bowl_small',
 
 
                    }
@@ -315,8 +309,8 @@ ENVIRONMENT_SPECS = (
         'kwargs': {'reward_type': 'pick_place',
                    'control_mode': 'discrete_gripper',
 
-                   'possible_objects': ['shed'],
-                   'num_objects': 1,
+                   'possible_objects': PICK_PLACE_TRAIN_OBJECTS,
+                   'num_objects': 2,
                    'load_tray': False,
                    'object_position_low': (.5, .18, -.30),
                    'object_position_high': (.7, .27, -.30),
