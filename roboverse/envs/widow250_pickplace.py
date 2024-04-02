@@ -94,17 +94,22 @@ class Widow250PickPlaceEnv(Widow250Env):
             bullet.load_state(osp.join(OBJECT_IN_GRIPPER_PATH,
                 'object_in_gripper_reset.bullet'))
             self.is_gripper_open = False
-        self.picked = False
+
         return self.get_observation()
 
     def get_reward(self, info):
         if self.reward_type == 'pick_place':
-            if not self.picked:
-                reward = float(50 if(info['grasp_success_target']) else -1)
-                if reward > 0:
+            reward = -1.
+            if not self.picked and not self.placed:
+                if(info['grasp_success_target']):
+                    reward = 50.
                     self.picked = True
-                    return reward
-            reward = float(100 if(info['place_success_target']) else -1)
+            if not self.placed:
+                if(info['place_success_target']):
+                    reward = 100.
+                    self.placed = True
+            elif self.placed:
+                reward = 1.
         elif self.reward_type == 'grasp':
             reward = float(100 if(info['grasp_success_target']) else -1)
         else:
