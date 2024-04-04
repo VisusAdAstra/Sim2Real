@@ -112,7 +112,7 @@ class Widow250PickPlaceEnv(Widow250Env):
                     self.placed = True
             elif self.placed:
                 ee_pos, _ = bullet.get_link_state(
-            self.env.robot_id, self.env.end_effector_index)
+            self.robot_id, self.end_effector_index)
                 if np.linalg.norm(self.pick_point - ee_pos) < 0.05:
                     reward = 1.
                 else:
