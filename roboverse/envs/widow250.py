@@ -192,7 +192,7 @@ class Widow250Env(gym.Env, Serializable):
         action = np.concatenate(
             ((0.5, 0.1, -0.2), [0., 0., 0.], [0.7], [0.]))
         env_action_dim = self.action_space.shape[0]
-        action += np.random.normal(scale=0.3, size=(env_action_dim,))
+        action += np.random.normal(scale=0.5, size=(env_action_dim,))
         self.step(action)
         
         import time
