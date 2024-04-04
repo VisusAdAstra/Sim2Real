@@ -89,6 +89,8 @@ class Widow250PickPlaceEnv(Widow250Env):
         ee_pos_init, ee_quat_init = bullet.get_link_state(
             self.robot_id, self.end_effector_index)
         ee_pos_init[2] -= 0.05
+        self.pick_point = bullet.get_object_position(
+            self.env.objects[self.object_to_target])[0]
 
         if self.start_object_in_gripper:
             bullet.load_state(osp.join(OBJECT_IN_GRIPPER_PATH,
@@ -109,7 +111,12 @@ class Widow250PickPlaceEnv(Widow250Env):
                     reward = 100.
                     self.placed = True
             elif self.placed:
-                reward = 1.
+                ee_pos, _ = bullet.get_link_state(
+            self.env.robot_id, self.env.end_effector_index)
+                if np.linalg.norm(self.pick_point - ee_pos) < 0.05:
+                    reward = 1.
+                else:
+                    reward = 0.
         elif self.reward_type == 'grasp':
             reward = float(100 if(info['grasp_success_target']) else -1)
         else:

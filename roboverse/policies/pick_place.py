@@ -42,7 +42,7 @@ class PickPlace:
 
         if self.place_attempted:
             # Avoid pick and place the object again after one attempt
-            action_xyz = [0., 0., 0.]
+            action_xyz = (self.pick_point - ee_pos) * self.xyz_action_scale #[0., 0., 0.]
             action_angles = [0., 0., 0.]
             action_gripper = [0.]
         elif gripper_pickpoint_dist > 0.02 and self.env.is_gripper_open:
