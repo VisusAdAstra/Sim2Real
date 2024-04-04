@@ -89,8 +89,10 @@ class Widow250PickPlaceEnv(Widow250Env):
         ee_pos_init, ee_quat_init = bullet.get_link_state(
             self.robot_id, self.end_effector_index)
         ee_pos_init[2] -= 0.05
+        
         self.pick_point = bullet.get_object_position(
-            self.env.objects[self.object_to_target])[0]
+            self.objects["shed"])[0]
+        self.pick_point[2] = -0.32
 
         if self.start_object_in_gripper:
             bullet.load_state(osp.join(OBJECT_IN_GRIPPER_PATH,
@@ -111,8 +113,7 @@ class Widow250PickPlaceEnv(Widow250Env):
                     reward = 100.
                     self.placed = True
             elif self.placed:
-                ee_pos, _ = bullet.get_link_state(
-            self.robot_id, self.end_effector_index)
+                ee_pos = bullet.get_link_state(self.robot_id, self.end_effector_index)[0]
                 if np.linalg.norm(self.pick_point - ee_pos) < 0.05:
                     reward = 1.
                 else:
