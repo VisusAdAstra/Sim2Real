@@ -127,6 +127,21 @@ class Widow250Env(gym.Env, Serializable):
         self.reset()
         self.ee_pos_init, self.ee_quat_init = bullet.get_link_state(
             self.robot_id, self.end_effector_index)
+        
+    from typing import Any, Dict
+    def compute_reward(self, achieved_goal, desired_goal, info: Dict[str, Any]) -> np.ndarray:
+        self.sparse = True
+        self.distance_threshold = 0.05
+        d = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
+        if self.sparse:
+            return -np.array(d > self.distance_threshold, dtype=np.float32)
+        else:
+            return -d.astype(np.float32)
+        
+    def is_success(self, achieved_goal: np.ndarray, desired_goal: np.ndarray) -> np.ndarray:
+        self.distance_threshold = 0.05
+        d = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
+        return np.array(d < self.distance_threshold, dtype=bool)
 
     def _load_meshes(self, target_position=None):
         self.table_id = objects.table()
@@ -170,6 +185,9 @@ class Widow250Env(gym.Env, Serializable):
             self.reset_joint_values)
         self.is_gripper_open = True  # TODO(avi): Clean this up
 
+        self.num_steps = 0
+        import time
+        time.sleep(0.1)
         return self.get_observation(), self.get_info()
 
     def step(self, action):
@@ -257,7 +275,13 @@ class Widow250Env(gym.Env, Serializable):
         reward = self.get_reward(info)
         done = self.done
         truncated = False
-        return self.get_observation(), reward, done, truncated, info
+        self.num_steps += 1
+        if self.num_steps > 98:
+            done = True
+        else:
+            done = False
+        #return self.get_observation(), reward, done, truncated, info
+        return self.get_observation(), reward, done, info
 
     def get_observation(self):
         gripper_state = self.get_gripper_state()
@@ -268,13 +292,17 @@ class Widow250Env(gym.Env, Serializable):
             self.objects[self.target_object])
         if self.observation_mode == 'pixels':
             image_observation = self.render_obs()
-            image_observation = np.float32(image_observation.flatten()) / 255.0
+            #image_observation = np.float32(image_observation.flatten()) / 255.0
+            image_observation = np.float32(image_observation) / 255.
+            image_observation = np.uint8(image_observation * 255.)
             observation = {
                 'object_position': object_position,
                 'object_orientation': object_orientation,
                 'state': np.concatenate(
                     (ee_pos, ee_quat, gripper_state, gripper_binary_state)),
-                'image': image_observation
+                'image': image_observation,
+                'desired_goal': float(100),
+                'achieved_goal': self.get_reward(self.get_info()),
             }
         elif self.observation_mode == 'state':
             observation = {
@@ -333,17 +361,20 @@ class Widow250Env(gym.Env, Serializable):
 
     def _set_observation_space(self):
         if self.observation_mode == 'pixels':
-            self.image_length = (self.observation_img_dim ** 2) * 3
-            img_space = gym.spaces.Box(0, 1, (self.image_length,),
-                                       dtype=np.float32)
+            #self.image_length = (self.observation_img_dim ** 2) * 3
+            self.image_length = (self.observation_img_dim, self.observation_img_dim, 3)
+            #img_space = gym.spaces.Box(0, 1, (self.image_length,), dtype=np.float32)
+            img_space = gym.spaces.Box(0, 255, (*self.image_length,), dtype=np.uint8)
             robot_state_dim = 10  # XYZ + QUAT + GRIPPER_STATE
             obs_bound = 100
             obs_high = np.ones(robot_state_dim) * obs_bound
             state_space = gym.spaces.Box(-obs_high, obs_high)
             object_position = gym.spaces.Box(-np.ones(3), np.ones(3))
             object_orientation = gym.spaces.Box(-np.ones(4), np.ones(4))
+            desired_goal = gym.spaces.Box(-np.ones(1), np.ones(1))
+            achieved_goal = gym.spaces.Box(-np.ones(1), np.ones(1))
             spaces = {'image': img_space, 'state': state_space, 'object_position': object_position,
-                      'object_orientation': object_orientation}
+                      'object_orientation': object_orientation,'desired_goal': desired_goal, 'achieved_goal': achieved_goal}
             self.observation_space = gym.spaces.Dict(spaces)
         elif self.observation_mode == 'state':
             robot_state_dim = 10  # XYZ + QUAT + GRIPPER_STATE
