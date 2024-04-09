@@ -186,6 +186,15 @@ class Widow250Env(gym.Env, Serializable):
         self.is_gripper_open = True  # TODO(avi): Clean this up
 
         self.num_steps = 0
+        self.picked = False
+        self.placed = False
+
+        action = np.concatenate(
+            ((0.5, 0.1, -0.2), [0., 0., 0.], [0.7], [0.]))
+        env_action_dim = self.action_space.shape[0]
+        action += np.random.normal(scale=0.5, size=(env_action_dim,))
+        self.step(action)
+        
         import time
         time.sleep(0.1)
         return self.get_observation(), self.get_info()
@@ -276,7 +285,7 @@ class Widow250Env(gym.Env, Serializable):
         done = self.done
         truncated = False
         self.num_steps += 1
-        if self.num_steps > 98:
+        if self.num_steps > 99:
             done = True
         else:
             done = False
