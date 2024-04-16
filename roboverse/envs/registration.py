@@ -215,6 +215,24 @@ ENVIRONMENT_SPECS = (
                    }
     },
     {
+        'id': 'Widow250PickPlace-v3',
+        'entry_point': 'roboverse.envs.widow250_pickplace:Widow250PickPlaceEnv',
+        'kwargs': {'reward_type': 'pick_place',
+                   'control_mode': 'discrete_gripper',
+
+                   'object_names': ('shed','gatorade',),
+                   'object_scales': (0.7,0.6,),
+                   'target_object': 'shed',
+                   'load_tray': False,
+                   'object_position_low': (.45, .18, -.30),
+                   'object_position_high': (.54, .27, -.30),
+
+                   'container_name': 'tray',
+                   'fixed_container_position': True,
+
+                   }
+    },
+    {
         'id': 'Widow250PickPlaceMultiObjectMultiContainerTrain-v0',
         'entry_point': 'roboverse.envs.widow250_pickplace'
                        ':Widow250PickPlaceMultiObjectMultiContainerEnv',
