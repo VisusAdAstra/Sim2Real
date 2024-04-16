@@ -172,9 +172,10 @@ class Widow250Env(gym.Env, Serializable):
         self.sparse = True
         self.distance_threshold = 5
         #d = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
-        d = np.abs(achieved_goal - desired_goal)
+        d = achieved_goal - (desired_goal-self.distance_threshold)
         if self.sparse:
-            return -np.array(d > self.distance_threshold, dtype=np.float32)
+            #return -np.array(d > self.distance_threshold, dtype=np.float32)
+            return np.array(d > 0, dtype=np.float32)
         else:
             return -d.astype(np.float32)
         
