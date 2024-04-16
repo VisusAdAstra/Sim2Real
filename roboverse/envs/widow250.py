@@ -164,13 +164,13 @@ class Widow250Env(gym.Env, Serializable):
 
     def _sample_goal(self) -> np.ndarray:
         """Sample a goal."""
-        goal = np.array([13, ])
+        goal = np.array([130, ])
         return goal
 
     from typing import Any, Dict
     def compute_reward(self, achieved_goal, desired_goal, info: Dict[str, Any]) -> np.ndarray:
         self.sparse = True
-        self.distance_threshold = 5
+        self.distance_threshold = 10
         #d = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
         d = achieved_goal - (desired_goal-self.distance_threshold)
         if self.sparse:
