@@ -30,7 +30,7 @@ ACTION_DIM = 8
 class Widow250Env(gym.Env, Serializable):
 
     def __init__(self, control_mode='continuous', observation_mode='state', observation_img_dim=48,
-                 transpose_image=True, object_names=('beer_bottle', 'gatorade'), object_scales=(0.75, 0.75),
+                 transpose_image=True, object_names=('shed', 'gatorade'), object_scales=(0.75, 0.75),
                  object_orientations=((0, 0, 1, 0), (0, 0, 1, 0)), object_position_high=(.7, .27, -.30),
                  object_position_low=(.5, .18, -.30), target_object='gatorade', load_tray=True, num_sim_steps=10,
                  num_sim_steps_reset=50, num_sim_steps_discrete_action=75, reward_type='grasping',

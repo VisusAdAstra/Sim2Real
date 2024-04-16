@@ -284,6 +284,11 @@ PICK_PLACE_TRAIN_OBJECTS = [
     'aero_cylinder',
 ]
 
+PICK_PLACE_TRAIN_OBJECTS1 = [
+    'gatorade',
+    'shed',
+]
+
 OBJECT_SCALINGS = {
     'conic_cup': 0.6,
     'ball': 1.0,
@@ -332,6 +337,7 @@ OBJECT_SCALINGS = {
     'conic_bin': 0.4,
     'jar': 0.8,
     'gatorade': 0.7,
+    'beer_bottle': 0.7,
     'bunsen_burner': 0.6,
     'long_vase': 0.5,
     # New objects:
@@ -380,6 +386,11 @@ PICK_PLACE_TEST_OBJECTS = [
     'elliptical_capsule',
 ]
 
+PICK_PLACE_OBJECTS = [
+    'shed',
+    'gatorade',
+]
+
 OBJECT_ORIENTATIONS = {
     'conic_cup': (0, 0, 1, 0),
     'ball': (0, 0, 1, 0),
@@ -426,6 +437,7 @@ OBJECT_ORIENTATIONS = {
     'conic_bin': (0, 0.707, 0.707, 0),
     'jar': (0, 0.707, 0, 0.707),
     'gatorade': (0, 0, 1, 0),
+    'beer_bottle': (0, 0, 1, 0),
     'bunsen_burner': (0, 0, 1, 0),
     'long_vase': (0, 0, 1, 0),
     # New objects:
