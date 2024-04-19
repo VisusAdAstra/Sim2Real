@@ -69,8 +69,8 @@ CONTAINER_CONFIGS = {
         'container_orientation': (0, 0, 0.707107, 0.707107),
         'container_scale': 0.2,
         'container_position_z': -0.37,
-        'place_success_height_threshold': -0.32,
-        'place_success_radius_threshold': 0.04,
+        'place_success_height_threshold': -0.30,
+        'place_success_radius_threshold': 0.06,
         'min_distance_from_object': 0.11,
     },
     'open_box': {
@@ -336,7 +336,7 @@ OBJECT_SCALINGS = {
 
     'conic_bin': 0.4,
     'jar': 0.8,
-    'gatorade': 0.7,
+    'gatorade': 0.5,
     'beer_bottle': 0.7,
     'bunsen_burner': 0.6,
     'long_vase': 0.5,

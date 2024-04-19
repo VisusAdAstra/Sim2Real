@@ -29,6 +29,7 @@ class PickPlace:
         self.drop_point = self.env.container_position
         self.drop_point[2] = -0.2
         self.place_attempted = False
+        self.elevated = True
 
     def get_action(self):
         ee_pos, _ = bullet.get_link_state(
@@ -42,7 +43,6 @@ class PickPlace:
 
         if self.place_attempted:
             # Avoid pick and place the object again after one attempt
-            self.pick_point[2] = -0.32
             action_xyz = (self.pick_point - ee_pos) * self.xyz_action_scale #[0., 0., 0.]
             action_angles = [0., 0., 0.]
             action_gripper = [0.]
@@ -59,6 +59,14 @@ class PickPlace:
             action_xyz = (self.pick_point  - ee_pos) * self.xyz_action_scale
             action_angles = [0., 0., 0.]
             action_gripper = [-0.7]
+            self.pick_point[2] = -0.2
+            self.elevated = False
+        elif not self.elevated:
+            # lifting objects above the height threshold for picking
+            action_xyz = (self.pick_point - ee_pos) * self.xyz_action_scale
+            action_angles = [0., 0., 0.]
+            action_gripper = [0.]
+            self.elevated = True
         elif not object_lifted:
             # lifting objects above the height threshold for picking
             action_xyz = (self.env.ee_pos_init - ee_pos) * self.xyz_action_scale
