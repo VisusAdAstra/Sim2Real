@@ -5,6 +5,7 @@ from roboverse.envs import objects
 from .multi_object import MultiObjectEnv, MultiObjectMultiContainerEnv
 from roboverse.assets.shapenet_object_lists import CONTAINER_CONFIGS
 import os.path as osp
+import numpy as np
 
 OBJECT_IN_GRIPPER_PATH = osp.join(osp.dirname(osp.dirname(osp.realpath(__file__))),
                 'assets/bullet-objects/bullet_saved_states/objects_in_gripper/')
@@ -91,8 +92,8 @@ class Widow250PickPlaceEnv(Widow250Env):
         ee_pos_init[2] -= 0.05
         
         self.pick_point = bullet.get_object_position(
-            self.objects["shed"])[0]
-        self.pick_point[2] = -0.32
+            self.objects[list(self.objects.keys())[0]])[0]
+        self.pick_point[2] = -0.2
 
         if self.start_object_in_gripper:
             bullet.load_state(osp.join(OBJECT_IN_GRIPPER_PATH,
@@ -114,8 +115,7 @@ class Widow250PickPlaceEnv(Widow250Env):
                     self.placed = True
             elif self.placed:
                 ee_pos = bullet.get_link_state(self.robot_id, self.end_effector_index)[0]
-                import numpy as np
-                if np.linalg.norm(self.pick_point - ee_pos) < 0.05:
+                if np.linalg.norm(self.pick_point - ee_pos) < 0.2:
                     reward = 1.
                 else:
                     reward = 0.

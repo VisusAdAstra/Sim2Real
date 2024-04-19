@@ -42,6 +42,7 @@ class PickPlace:
 
         if self.place_attempted:
             # Avoid pick and place the object again after one attempt
+            self.pick_point[2] = -0.32
             action_xyz = (self.pick_point - ee_pos) * self.xyz_action_scale #[0., 0., 0.]
             action_angles = [0., 0., 0.]
             action_gripper = [0.]
@@ -74,6 +75,8 @@ class PickPlace:
             action_angles = [0., 0., 0.]
             action_gripper = [0.7]
             self.place_attempted = True
+            import time
+            time.sleep(0.1)
 
         agent_info = dict(place_attempted=self.place_attempted, done=done)
         neutral_action = [0.]

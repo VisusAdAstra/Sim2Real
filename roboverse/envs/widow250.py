@@ -30,7 +30,7 @@ ACTION_DIM = 8
 class Widow250Env(gym.Env, Serializable):
 
     def __init__(self, control_mode='continuous', observation_mode='state', observation_img_dim=48,
-                 transpose_image=True, object_names=('beer_bottle', 'gatorade'), object_scales=(0.75, 0.75),
+                 transpose_image=True, object_names=('shed', 'gatorade'), object_scales=(0.75, 0.75),
                  object_orientations=((0, 0, 1, 0), (0, 0, 1, 0)), object_position_high=(.7, .27, -.30),
                  object_position_low=(.5, .18, -.30), target_object='gatorade', load_tray=True, num_sim_steps=10,
                  num_sim_steps_reset=50, num_sim_steps_discrete_action=75, reward_type='grasping',
@@ -124,24 +124,11 @@ class Widow250Env(gym.Env, Serializable):
 
         self.is_gripper_open = True  # TODO(avi): Clean this up
 
+        self.state = np.zeros(1)
+        self.goal = np.zeros(1)
         self.reset()
         self.ee_pos_init, self.ee_quat_init = bullet.get_link_state(
             self.robot_id, self.end_effector_index)
-        
-    from typing import Any, Dict
-    def compute_reward(self, achieved_goal, desired_goal, info: Dict[str, Any]) -> np.ndarray:
-        self.sparse = True
-        self.distance_threshold = 0.05
-        d = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
-        if self.sparse:
-            return -np.array(d > self.distance_threshold, dtype=np.float32)
-        else:
-            return -d.astype(np.float32)
-        
-    def is_success(self, achieved_goal: np.ndarray, desired_goal: np.ndarray) -> np.ndarray:
-        self.distance_threshold = 0.05
-        d = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
-        return np.array(d < self.distance_threshold, dtype=bool)
 
     def _load_meshes(self, target_position=None):
         self.table_id = objects.table()
@@ -175,6 +162,28 @@ class Widow250Env(gym.Env, Serializable):
                     scale=self.object_scales[object_name])
             bullet.step_simulation(self.num_sim_steps_reset)
 
+    def _sample_goal(self) -> np.ndarray:
+        """Sample a goal."""
+        goal = np.array([80, ]) #130
+        return goal
+
+    from typing import Any, Dict
+    def compute_reward(self, achieved_goal, desired_goal, info: Dict[str, Any]) -> np.ndarray:
+        self.sparse = True
+        self.distance_threshold = 10
+        #d = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
+        d = achieved_goal - (desired_goal-self.distance_threshold)
+        if self.sparse:
+            #return -np.array(d > self.distance_threshold, dtype=np.float32)
+            return np.array(d > 0, dtype=np.float32)
+        else:
+            return -d.astype(np.float32)
+        
+    # def is_success(self, achieved_goal: np.ndarray, desired_goal: np.ndarray) -> np.ndarray:
+    #     self.distance_threshold = 0.05
+    #     d = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
+    #     return np.array(d < self.distance_threshold, dtype=bool)
+
     def reset(self, target=None, seed=None, options=None):
         bullet.reset()
         bullet.setup_headless()
@@ -195,6 +204,8 @@ class Widow250Env(gym.Env, Serializable):
         action += np.random.normal(scale=0.5, size=(env_action_dim,))
         self.step(action)
         
+        self.goal = self._sample_goal()
+        self.state = np.zeros(1)
         import time
         time.sleep(0.1)
         return self.get_observation(), self.get_info()
@@ -289,6 +300,7 @@ class Widow250Env(gym.Env, Serializable):
             done = True
         else:
             done = False
+        self.state += reward
         #return self.get_observation(), reward, done, truncated, info
         return self.get_observation(), reward, done, info
 
@@ -309,7 +321,9 @@ class Widow250Env(gym.Env, Serializable):
                 #'object_orientation': object_orientation,
                 'state': np.concatenate(
                     (ee_pos, ee_quat, gripper_state, gripper_binary_state)),
-                'image': image_observation
+                'image': image_observation,
+                'achieved_goal': np.copy(self.state),
+                'desired_goal' : np.copy(self.goal),
             }
         elif self.observation_mode == 'state':
             observation = {
@@ -378,9 +392,12 @@ class Widow250Env(gym.Env, Serializable):
             state_space = gym.spaces.Box(-obs_high, obs_high)
             object_position = gym.spaces.Box(-np.ones(3), np.ones(3))
             object_orientation = gym.spaces.Box(-np.ones(4), np.ones(4))
+            desired_goal = gym.spaces.Box(-np.ones(1)*100, np.ones(1)*1000)
+            achieved_goal = gym.spaces.Box(-np.ones(1)*100, np.ones(1)*1000)
             #spaces = {'image': img_space, 'state': state_space, 'object_position': object_position,
             #          'object_orientation': object_orientation}
-            spaces = {'image': img_space, 'state': state_space}
+            spaces = {'image': img_space, 'state': state_space,
+                      'desired_goal': desired_goal, 'achieved_goal': achieved_goal}
             self.observation_space = gym.spaces.Dict(spaces)
         elif self.observation_mode == 'state':
             robot_state_dim = 10  # XYZ + QUAT + GRIPPER_STATE
