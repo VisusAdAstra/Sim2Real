@@ -3,6 +3,7 @@ from roboverse.assets.shapenet_object_lists import (
     CONTAINER_CONFIGS)
 
 import numpy as np
+import random
 
 
 class MultiObjectEnv:
@@ -27,7 +28,8 @@ class MultiObjectEnv:
         self.object_scales = dict()
         self.object_orientations = dict()
         for object_name in self.object_names:
-            self.object_orientations[object_name] = OBJECT_ORIENTATIONS[object_name]
+            noise = (0, 0, 0, random.uniform(0., .2))
+            self.object_orientations[object_name] = tuple(np.add(OBJECT_ORIENTATIONS[object_name],noise))
             self.object_scales[object_name] = OBJECT_SCALINGS[object_name]
         self.target_object = self.object_names[0]
         return super().reset()

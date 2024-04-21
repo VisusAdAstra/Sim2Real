@@ -19,8 +19,11 @@ class PickPlace:
 
     def reset(self):
         # self.dist_thresh = 0.06 + np.random.normal(scale=0.01)
-        self.object_to_target = self.env.object_names[
-            np.random.randint(self.env.num_objects)]
+        # self.object_to_target = self.env.object_names[
+        #     np.random.randint(self.env.num_objects)]
+        self.object_to_target = self.env.target_object
+        self.pick_angle = bullet.quat_to_deg(bullet.get_object_position(
+            self.env.objects[self.object_to_target])[1])
         self.pick_point = bullet.get_object_position(
             self.env.objects[self.object_to_target])[0]
         if self.object_to_target in GRASP_OFFSETS.keys():

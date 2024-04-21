@@ -69,8 +69,8 @@ CONTAINER_CONFIGS = {
         'container_orientation': (0, 0, 0.707107, 0.707107),
         'container_scale': 0.2,
         'container_position_z': -0.37,
-        'place_success_height_threshold': -0.30,
-        'place_success_radius_threshold': 0.06,
+        'place_success_height_threshold': -0.30, #-0.32
+        'place_success_radius_threshold': 0.06, #0.04
         'min_distance_from_object': 0.11,
     },
     'open_box': {
@@ -295,6 +295,7 @@ OBJECT_SCALINGS = {
     'sack_vase': 0.6,
     'fountain_vase': 0.4,
     'shed': 0.6,
+    'shed2': 0.6,
     'circular_table': 0.4,
     'hex_deep_bowl': 0.4,
     'smushed_dumbbell': 0.6,
@@ -388,7 +389,7 @@ PICK_PLACE_TEST_OBJECTS = [
 
 PICK_PLACE_OBJECTS = [
     'shed',
-    'gatorade',
+    'shed2',
 ]
 
 OBJECT_ORIENTATIONS = {
@@ -397,6 +398,7 @@ OBJECT_ORIENTATIONS = {
     'sack_vase': (0, 0.707, 0.707, 0),
     'fountain_vase': (0, 0, 1, 0),
     'shed': (0, 0, 1, 0),
+    'shed2': (0, 0, 1, 0),
     'circular_table': (0, 0, 1, 0),
     'hex_deep_bowl': (0, 0, 1, 0),
     'smushed_dumbbell': (0, 0, 1, 0),
