@@ -185,6 +185,7 @@ class Widow250Env(gym.Env, Serializable):
     #     return np.array(d < self.distance_threshold, dtype=bool)
 
     def reset(self, target=None, seed=None, options=None):
+        #self.seed(seed)
         bullet.reset()
         bullet.setup_headless()
         self._load_meshes()
