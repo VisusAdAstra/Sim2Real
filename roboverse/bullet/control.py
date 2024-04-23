@@ -1,7 +1,7 @@
 import pybullet as p
 import numpy as np
 import random
-import modern_robotics as mr
+#import modern_robotics as mr
 import math
 
 
@@ -229,8 +229,8 @@ def inverse_kinematics(ee_pose, dof, custom_guess=None):
         initial_guesses = [custom_guess]
 
     for guess in initial_guesses:
-        theta_list, success = mr.IKinSpace(robot_des.Slist, robot_des.M, ee_transform, guess, 0.0001,
-                                           0.0001)
+        theta_list, success = None, None #mr.IKinSpace(robot_des.Slist, robot_des.M, ee_transform, guess, 0.0001,
+                                           #0.0001)
 
         # Check to make sure a solution was found and that no joint limits were violated
         if success:
