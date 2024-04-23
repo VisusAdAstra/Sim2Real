@@ -85,8 +85,8 @@ class Widow250PickPlaceEnv(Widow250Env):
                 scale=self.object_scales[object_name])
             bullet.step_simulation(self.num_sim_steps_reset)
 
-    def reset(self, seed=None, options=None):
-        super(Widow250PickPlaceEnv, self).reset(seed=seed, options=options)
+    def reset(self):
+        super(Widow250PickPlaceEnv, self).reset()
         ee_pos_init, ee_quat_init = bullet.get_link_state(
             self.robot_id, self.end_effector_index)
         ee_pos_init[2] -= 0.05
