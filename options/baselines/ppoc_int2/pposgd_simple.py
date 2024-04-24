@@ -15,11 +15,21 @@ from scipy import spatial
 import gym
 import matplotlib.pyplot as plt
 
+
+def stack_state(ob):
+    ob["state"] = np.resize(ob["state"], (12,))
+    ob["image"][0][0] = ob["state"][:3]
+    ob["image"][0][-1] = ob["state"][3:6]
+    ob["image"][-1][0] = ob["state"][6:9]
+    ob["image"][-1][-1] = ob["state"][9:]
+    return ob
+
 def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,results,rewbuffer,dc,epoch,seed,plots, w_intfc,switch):
     t = 0
     ac = env.action_space.sample() # not used, just so we have the datatype
     new = True # marks if we're on first timestep of an episode
     ob = env.reset()
+    ob = ob["image"]
 
     xs = np.arange(-.4,0.4,0.01)
     ys = np.arange(0.45,-0.2,-0.01)
@@ -111,8 +121,8 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
         acs[i] = ac
         prevacs[i] = prevac
 
-
-        ob, rew, new, _ = env.step(ac)
+        ob, rew, new, _ = env.step(ac[0])
+        ob = ob["image"]
         rews[i] = rew
         realrews[i] = rew
 
@@ -173,6 +183,7 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
             
             ep_num +=1
             ob = env.reset()
+            ob = ob["image"]
 
             option = pi.get_option(ob)
             if epoch:

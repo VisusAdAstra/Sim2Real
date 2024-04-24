@@ -23,7 +23,7 @@ def single_threaded_session():
 
 
 def train(env, num_timesteps, seed, num_options, app, saves, wsaves, epoch, dc, plots, w_intfc, switch, mainlr, intlr, piolr, fewshot):
-    from baselines.ppoc_int2 import cnn_policy, pposgd_simple
+    from baselines.ppoc_int2 import multi_policy, pposgd_simple
     rank = MPI.COMM_WORLD.Get_rank()
     sess = single_threaded_session()
     sess.__enter__()
@@ -39,7 +39,7 @@ def train(env, num_timesteps, seed, num_options, app, saves, wsaves, epoch, dc, 
 
 
     def policy_fn(name, ob_space, ac_space):
-        return cnn_policy.CnnPolicy(name=name, ob_space=ob_space, ac_space=ac_space, num_options=num_options, dc=dc, w_intfc=w_intfc)
+        return multi_policy.MultiPolicy(name=name, ob_space=ob_space, ac_space=ac_space, num_options=num_options, dc=dc, w_intfc=w_intfc)
 
     env = bench.Monitor(env, logger.get_dir() and
                         osp.join(logger.get_dir(), str(rank)))
