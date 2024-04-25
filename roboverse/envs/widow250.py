@@ -126,6 +126,7 @@ class Widow250Env(gym.Env, Serializable):
 
         self.state = np.zeros(1)
         self.goal = np.zeros(1)
+        self.option = np.zeros(1)
         self.reset()
         self.ee_pos_init, self.ee_quat_init = bullet.get_link_state(
             self.robot_id, self.end_effector_index)
@@ -161,6 +162,9 @@ class Widow250Env(gym.Env, Serializable):
                     object_quat=self.object_orientations[object_name],
                     scale=self.object_scales[object_name])
             bullet.step_simulation(self.num_sim_steps_reset)
+
+    def set_option(self, option):
+        self.option = np.array([option, ])
 
     def _sample_goal(self) -> np.ndarray:
         """Sample a goal."""
@@ -207,6 +211,7 @@ class Widow250Env(gym.Env, Serializable):
         
         self.goal = self._sample_goal()
         self.state = np.zeros(1)
+        self.option = np.zeros(1)
         import time
         time.sleep(0.1)
         return self.get_observation(), self.get_info()
@@ -325,6 +330,7 @@ class Widow250Env(gym.Env, Serializable):
                 'image': image_observation,
                 'achieved_goal': np.copy(self.state),
                 'desired_goal' : np.copy(self.goal),
+                'option' : np.copy(self.option),
             }
         elif self.observation_mode == 'state':
             observation = {
@@ -395,10 +401,11 @@ class Widow250Env(gym.Env, Serializable):
             object_orientation = gym.spaces.Box(-np.ones(4), np.ones(4))
             desired_goal = gym.spaces.Box(-np.ones(1)*100, np.ones(1)*1000)
             achieved_goal = gym.spaces.Box(-np.ones(1)*100, np.ones(1)*1000)
+            option = gym.spaces.Box(-np.ones(1), np.ones(1)*100)
             #spaces = {'image': img_space, 'state': state_space, 'object_position': object_position,
             #          'object_orientation': object_orientation}
             spaces = {'image': img_space, 'state': state_space,
-                      'desired_goal': desired_goal, 'achieved_goal': achieved_goal}
+                      'desired_goal': desired_goal, 'achieved_goal': achieved_goal, 'option': option}
             self.observation_space = gym.spaces.Dict(spaces)
         elif self.observation_mode == 'state':
             robot_state_dim = 10  # XYZ + QUAT + GRIPPER_STATE

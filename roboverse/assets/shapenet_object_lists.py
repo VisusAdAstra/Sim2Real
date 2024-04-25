@@ -69,8 +69,8 @@ CONTAINER_CONFIGS = {
         'container_orientation': (0, 0, 0.707107, 0.707107),
         'container_scale': 0.2,
         'container_position_z': -0.37,
-        'place_success_height_threshold': -0.30, #-0.32
-        'place_success_radius_threshold': 0.06, #0.04
+        'place_success_height_threshold': -0.31, #-0.32
+        'place_success_radius_threshold': 0.05, #0.04
         'min_distance_from_object': 0.11,
     },
     'open_box': {

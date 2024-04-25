@@ -57,6 +57,7 @@ class PickPlace:
                 action_xyz[2] = 0.0
             action_angles = [0., 0., 0.]
             action_gripper = [0.0]
+            self.env.set_option(1)
         elif self.env.is_gripper_open:
             # near the object enough, performs grasping action
             action_xyz = (self.pick_point  - ee_pos) * self.xyz_action_scale
@@ -64,28 +65,33 @@ class PickPlace:
             action_gripper = [-0.7]
             self.pick_point[2] = -0.2
             self.elevated = False
+            self.env.set_option(1)
         elif not self.elevated:
             # lifting objects above the height threshold for picking
             action_xyz = (self.pick_point - ee_pos) * self.xyz_action_scale
             action_angles = [0., 0., 0.]
             action_gripper = [0.]
             self.elevated = True
+            self.env.set_option(2)
         elif not object_lifted:
             # lifting objects above the height threshold for picking
             action_xyz = (self.env.ee_pos_init - ee_pos) * self.xyz_action_scale
             action_angles = [0., 0., 0.]
             action_gripper = [0.]
+            self.env.set_option(2)
         elif gripper_droppoint_dist > 0.02:
             # lifted, now need to move towards the container
             action_xyz = (self.drop_point - ee_pos) * self.xyz_action_scale
             action_angles = [0., 0., 0.]
             action_gripper = [0.]
+            self.env.set_option(3)
         else:
             # already moved above the container; drop object
             action_xyz = (0., 0., 0.)
             action_angles = [0., 0., 0.]
             action_gripper = [0.7]
             self.place_attempted = True
+            self.env.set_option(3)
             import time
             time.sleep(0.1)
 

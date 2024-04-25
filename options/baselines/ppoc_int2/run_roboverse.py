@@ -22,7 +22,7 @@ def single_threaded_session():
     return make_session(1)
 
 
-def train(env, num_timesteps, seed, num_options, app, saves, wsaves, epoch, dc, plots, w_intfc, switch, mainlr, intlr, piolr, fewshot):
+def train(env, num_timesteps, seed, num_options, app, saves, wsaves, epoch, dc, plots, w_intfc, switch, mainlr, intlr, piolr, fewshot, expert=None):
     from baselines.ppoc_int2 import multi_policy, pposgd_simple
     rank = MPI.COMM_WORLD.Get_rank()
     sess = single_threaded_session()
@@ -56,7 +56,7 @@ def train(env, num_timesteps, seed, num_options, app, saves, wsaves, epoch, dc, 
                         optim_epochs=4, optim_stepsize=mainlr, optim_batchsize=optimsize,
                         gamma=0.99, lam=0.95, schedule='linear', num_options=num_options,
                         app=app, saves=saves, wsaves=wsaves, epoch=epoch, seed=seed, dc=dc, plots=plots,
-                        w_intfc=w_intfc, switch=switch, intlr=intlr, piolr=piolr, fewshot=fewshot
+                        w_intfc=w_intfc, switch=switch, intlr=intlr, piolr=piolr, fewshot=fewshot, expert=expert
                         )
     env.close()
 

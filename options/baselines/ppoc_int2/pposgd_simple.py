@@ -16,16 +16,18 @@ import gym
 import matplotlib.pyplot as plt
 
 
-def stack_state(ob):
-    ob["state"] = np.resize(ob["state"], (12,))
-    ob["image"][0][0] = ob["state"][:3]
-    ob["image"][0][-1] = ob["state"][3:6]
-    ob["image"][-1][0] = ob["state"][6:9]
-    ob["image"][-1][-1] = ob["state"][9:]
+def stack_state(ob, state):
+    state = np.resize(state, (12,))
+    ob[0][0] = state[:3]
+    ob[0][-1] = state[3:6]
+    ob[-1][0] = state[6:9]
+    ob[-1][-1] = state[9:]
     return ob
 
-def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,results,rewbuffer,dc,epoch,seed,plots, w_intfc,switch):
+def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,results,rewbuffer,dc,epoch,seed,plots, w_intfc,switch,expert=None):
     t = 0
+    eta = 1
+    run = False
     ac = env.action_space.sample() # not used, just so we have the datatype
     new = True # marks if we're on first timestep of an episode
     ob = env.reset()
@@ -111,6 +113,10 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
                 from gym_miniworld.envs.oneroom import OneRoom
                 env = OneRoom(change_goal=True)
             ################################
+            if iters_so_far%2 == 0:
+                eta *= 0.99
+            run = np.random.rand()>eta
+            print("run:", run, eta)
 
         i = t % horizon
         obs[i] = ob
@@ -121,8 +127,20 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
         acs[i] = ac
         prevacs[i] = prevac
 
-        ob, rew, new, _ = env.step(ac[0])
-        ob = ob["image"]
+        if run:
+            ob_, rew, new, _ = env.step(ac[0])
+            ob = ob_["image"]
+            state = ob_["state"]
+        else:
+            ob_, rew, new, _ = env.step(ac[0])
+            sample = expert.sample(1)
+            ob_, rew, new, _ = sample.observations, \
+                sample.rewards.detach().cpu().numpy()[0], new, None
+            ob = np.transpose(ob_["image"].detach().cpu().numpy()[0], (1, 2, 0))
+            state = ob_["state"].detach().cpu().numpy()[0]
+            opts[i] = ob_["option"].detach().cpu().numpy()[0]
+            acs[i] = sample.actions.detach().cpu().numpy()[0]
+        ob = stack_state(ob, state)
         rews[i] = rew
         realrews[i] = rew
 
@@ -253,7 +271,7 @@ def learn(env, policy_func, *,
         wsaves=False,
         epoch=0,
         seed=1,
-        dc=0,plots=False,w_intfc=True,switch=False,intlr=1e-4,piolr=1e-4,fewshot=False,
+        dc=0,plots=False,w_intfc=True,switch=False,intlr=1e-4,piolr=1e-4,fewshot=False,expert=None
         ):
 
 
@@ -411,7 +429,7 @@ def learn(env, policy_func, *,
 
     # Prepare for rollouts
     # ----------------------------------------
-    seg_gen = traj_segment_generator(pi, env, timesteps_per_batch, stochastic=True, num_options=num_options,saves=saves,results=results,rewbuffer=rewbuffer,dc=dc,epoch=epoch,seed=seed,plots=plots,w_intfc=w_intfc,switch=switch)
+    seg_gen = traj_segment_generator(pi, env, timesteps_per_batch, stochastic=True, num_options=num_options,saves=saves,results=results,rewbuffer=rewbuffer,dc=dc,epoch=epoch,seed=seed,plots=plots,w_intfc=w_intfc,switch=switch,expert=expert)
 
     datas = [0 for _ in range(num_options)]
 
