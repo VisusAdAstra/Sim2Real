@@ -17,11 +17,12 @@ import matplotlib.pyplot as plt
 
 
 def stack_state(ob, state):
+    ob = ob.astype(float)
     state = np.resize(state, (12,))
-    ob[0][0] = state[:3]
-    ob[0][-1] = state[3:6]
-    ob[-1][0] = state[6:9]
-    ob[-1][-1] = state[9:]
+    ob[0][0] = np.clip(state[:3]*255, a_min=-255., a_max=255.)
+    ob[0][-1] = np.clip(state[3:6]*255, a_min=-255., a_max=255.)
+    ob[-1][0] = np.clip(state[6:9]*255, a_min=-255., a_max=255.)
+    ob[-1][-1] = np.clip(state[9:]*255, a_min=-255., a_max=255.)
     return ob
 
 def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,results,rewbuffer,dc,epoch,seed,plots, w_intfc,switch,expert=None):
@@ -127,19 +128,25 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
         acs[i] = ac
         prevacs[i] = prevac
 
+        if np.isnan(ac[0]).any():
+            #print(rews)
+            ac = [env.action_space.sample()]
         if run:
             ob_, rew, new, _ = env.step(ac[0])
             ob = ob_["image"]
             state = ob_["state"]
         else:
+            ac = [env.action_space.sample()]
             ob_, rew, new, _ = env.step(ac[0])
             sample = expert.sample(1)
             ob_, rew, new, _ = sample.observations, \
-                sample.rewards.detach().cpu().numpy()[0], new, None
+                sample.rewards.detach().cpu().numpy()[0][0], new, None
             ob = np.transpose(ob_["image"].detach().cpu().numpy()[0], (1, 2, 0))
             state = ob_["state"].detach().cpu().numpy()[0]
-            opts[i] = ob_["option"].detach().cpu().numpy()[0]
-            acs[i] = sample.actions.detach().cpu().numpy()[0]
+            option = int(ob_["option"].detach().cpu().numpy()[0][0])
+            opts[i] = option
+            ac = sample.actions.detach().cpu().numpy()
+            acs[i] = ac
         ob = stack_state(ob, state)
         rews[i] = rew
         realrews[i] = rew

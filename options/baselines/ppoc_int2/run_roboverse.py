@@ -1,4 +1,7 @@
 # !/usr/bin/env python
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = "true"
 from baselines.common import set_global_seeds
 import baselines.ppoc_int2.tf_util1 as U
 from mpi4py import MPI

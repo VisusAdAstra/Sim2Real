@@ -43,6 +43,7 @@ class PickPlace:
         gripper_pickpoint_dist = np.linalg.norm(self.pick_point - ee_pos)
         gripper_droppoint_dist = np.linalg.norm(self.drop_point - ee_pos)
         done = False
+        self.env.set_option(0)
 
         if self.place_attempted:
             # Avoid pick and place the object again after one attempt
