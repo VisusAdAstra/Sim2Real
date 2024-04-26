@@ -72,6 +72,7 @@ jupyterlab_widgets==3.0.10
 keras==2.13.1
 kiwisolver==1.4.5
 libclang==16.0.6
+libtmux==0.37.0
 lz4==4.3.3
 Markdown==3.5.2
 markdown-it-py==3.0.0
@@ -80,6 +81,7 @@ matplotlib==3.7.5
 matplotlib-inline==0.1.6
 mdurl==0.1.2
 mistune==3.0.2
+modern-robotics==1.1.1
 mpmath==1.3.0
 nbclient==0.10.0
 nbconvert==7.16.3
@@ -117,7 +119,7 @@ pkgutil_resolve_name==1.3.10
 platformdirs==4.2.0
 prometheus_client==0.20.0
 prompt-toolkit==3.0.42
-protobuf==4.25.3
+protobuf==3.20.3
 psutil==5.9.8
 ptyprocess==0.7.0
 pure-eval==0.2.2
@@ -141,6 +143,8 @@ rfc3339-validator==0.1.4
 rfc3986-validator==0.1.1
 rich==13.7.1
 -e git+https://github.com/avisingh599/cog.git@98252e10db8bfe38ea091835f242a3d142388feb#egg=rlkit
+-e git+https://github.com/montrealrobotics/robo-gym.git@eee574912b75468f25b05ab415987210a8a6bca1#egg=robo_gym
+robo-gym-server-modules==0.2.7.9
 -e git+https://github.com/montrealrobotics/roboverse.git@c3fe01c12e2592178cbc294a28e692d98857d47a#egg=roboverse
 rpds-py==0.18.0
 rsa==4.9
