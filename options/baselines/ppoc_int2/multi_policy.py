@@ -12,7 +12,6 @@ def dense3D2(x, size, name, option, num_options=1, weight_init=None, bias=True):
     if bias:
         b = tf.compat.v1.get_variable(name + "/b", [num_options,size], initializer=tf.compat.v1.zeros_initializer())
         return ret + b[option[0]]
-
     else:
         return ret
 

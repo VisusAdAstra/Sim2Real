@@ -128,24 +128,24 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
         acs[i] = ac
         prevacs[i] = prevac
 
-        if np.isnan(ac[0]).any():
-            #print(rews)
-            ac = [env.action_space.sample()]
+        # if np.isnan(ac[0]).any():
+        #     #print(rews)
+        #     ac = [env.action_space.sample()]
         if run:
             ob_, rew, new, _ = env.step(ac[0])
             ob = ob_["image"]
             state = ob_["state"]
         else:
-            ac = [env.action_space.sample()]
             ob_, rew, new, _ = env.step(ac[0])
             sample = expert.sample(1)
             ob_, rew, new, _ = sample.observations, \
-                sample.rewards.detach().cpu().numpy()[0][0], new, None
+                float(sample.rewards.detach().cpu().numpy()[0][0]), \
+                bool(sample.dones.detach().cpu().numpy()[0][0]), None
             ob = np.transpose(ob_["image"].detach().cpu().numpy()[0], (1, 2, 0))
             state = ob_["state"].detach().cpu().numpy()[0]
-            option = int(ob_["option"].detach().cpu().numpy()[0][0])
-            opts[i] = option
+            option = ob_["option"].detach().cpu().numpy()[0][0].astype(np.int64)
             ac = sample.actions.detach().cpu().numpy()
+            opts[i] = option
             acs[i] = ac
         ob = stack_state(ob, state)
         rews[i] = rew

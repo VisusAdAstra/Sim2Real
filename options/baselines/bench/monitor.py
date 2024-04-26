@@ -49,8 +49,8 @@ class Monitor(Wrapper):
 
 
     def step(self, action):
-        if self.needs_reset:
-            raise RuntimeError("Tried to step environment that needs reset")
+        # if self.needs_reset:
+        #     raise RuntimeError("Tried to step environment that needs reset")
         ob, rew, done, info = self.env.step(action)
         self.update(ob, rew, done, info)
         return (ob, rew, done, info)
