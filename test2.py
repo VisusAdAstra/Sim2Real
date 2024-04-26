@@ -117,17 +117,21 @@ checkpoint_callback = CheckpointCallback(
   save_vecnormalize=False,
 )
 
-model = TQC(env=env, batch_size=2048, buffer_size=1_000_000, gamma=0.99, learning_rate=0.001, policy='MultiInputPolicy',
-             policy_kwargs=dict(net_arch=[512, 512, 512], n_critics=2),
-             replay_buffer_class=HerReplayBuffer,
-             replay_buffer_kwargs=dict(goal_selection_strategy='future', n_sampled_goal=4),
-             tau=0.05, learning_starts=0, verbose=1)
+LOAD = True
+if LOAD:
+    print(f"data/seed_1/tqc_model_979000_steps")
+    model = TQC.load(f"data/seed_1/tqc_model_979000_steps", env=env)
+    model.set_env(env)
+else:
+    model = TQC(env=env, batch_size=2048, buffer_size=1_000_000, gamma=0.95, learning_rate=0.001, policy='MultiInputPolicy',
+                 policy_kwargs=dict(net_arch=[512, 512, 512], n_critics=2),
+                 replay_buffer_class=HerReplayBuffer,
+                 replay_buffer_kwargs=dict(goal_selection_strategy='future', n_sampled_goal=4),
+                 tau=0.05, learning_starts=200, verbose=1)
 
-#model = TQC.load("data/tqc")
-#model.set_env(env)
-COLLECT=True
+COLLECT=False
 if COLLECT:
-    collect_data(env, model, "pickplace", "place_success_target", 20000, 30)
+    collect_data(env, model, "pickplace", "place_success_target", 20000, 35)
     model.save_replay_buffer(f"data/seed_{seed}/tqc_expert_pick_place")
 else:
     print("load_replay_buffer")
@@ -137,19 +141,17 @@ else:
 # model.learn(total_timesteps=0, callback=checkpoint_callback, log_interval=5, tb_log_name="exp", reset_num_timesteps = False, progress_bar=True)
 # model.train(gradient_steps=20000)
 
-# print("start learning")
-# model.learn(total_timesteps=500_000, callback=checkpoint_callback, log_interval=5, tb_log_name="exp", reset_num_timesteps = False, progress_bar=True)
-# model.save(f"data/seed_{seed}/tqc_pick_place")
-# model.save_replay_buffer(f"data/seed_{seed}/tqc_trained_pick_place")
+print("start learning")
+model.learn(total_timesteps=500_000, callback=checkpoint_callback, log_interval=5, tb_log_name="exp", reset_num_timesteps = False, progress_bar=True)
+model.save(f"data/seed_{seed}/tqc_pick_place")
+model.save_replay_buffer(f"data/seed_{seed}/tqc_trained_pick_place")
 
-# print("load_replay_buffer")
-# model.load_replay_buffer(f"data/seed_{seed}/tqc_expert_pick_place")
-# collect_data(env, model, "pickplace", "place_success_target", 10000, 30)
-# model.save_replay_buffer(f"data/seed_{seed}/tqc_expert_pick_place")
+print("load_replay_buffer")
+model.load_replay_buffer(f"data/seed_{seed}/tqc_expert_pick_place")
+collect_data(env, model, "pickplace", "place_success_target", 10000, 30)
+model.save_replay_buffer(f"data/seed_{seed}/tqc_expert_pick_place")
 
-# model.learn(total_timesteps=500_000, callback=checkpoint_callback, log_interval=5, tb_log_name="exp", reset_num_timesteps = False, progress_bar=True)
-# model.save(f"data/seed_{seed}/tqc_pick_place")
-# model.save_replay_buffer(f"data/seed_{seed}/tqc_trained_pick_place")
-
-# print("finish learning")
-
+model.learn(total_timesteps=500_000, callback=checkpoint_callback, log_interval=5, tb_log_name="exp", reset_num_timesteps = False, progress_bar=True)
+model.save(f"data/seed_{seed}/tqc_pick_place")
+model.save_replay_buffer(f"data/seed_{seed}/tqc_trained_pick_place")
+print("finish learning")
