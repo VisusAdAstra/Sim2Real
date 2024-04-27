@@ -27,7 +27,7 @@ def stack_state(ob, state):
 
 def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,results,rewbuffer,dc,epoch,seed,plots, w_intfc,switch,expert=None):
     t = 0
-    eta = 1
+    eta = 0.8
     run = False
     ac = env.action_space.sample() # not used, just so we have the datatype
     new = True # marks if we're on first timestep of an episode
@@ -128,23 +128,30 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
         acs[i] = ac
         prevacs[i] = prevac
 
-        # if np.isnan(ac[0]).any():
-        #     #print(rews)
-        #     ac = [env.action_space.sample()]
-        if run:
+        if np.random.rand()>eta:
             ob_, rew, new, _ = env.step(ac[0])
             ob = ob_["image"]
             state = ob_["state"]
+
+            ac_prime = ac
+            option_prime = option
         else:
-            ob_, rew, new, _ = env.step(ac[0])
-            sample = expert.sample(1)
-            ob_, rew, new, _ = sample.observations, \
-                float(sample.rewards.detach().cpu().numpy()[0][0]), \
-                bool(sample.dones.detach().cpu().numpy()[0][0]), None
-            ob = np.transpose(ob_["image"].detach().cpu().numpy()[0], (1, 2, 0))
-            state = ob_["state"].detach().cpu().numpy()[0]
-            option = ob_["option"].detach().cpu().numpy()[0][0].astype(np.int64)
-            ac = sample.actions.detach().cpu().numpy()
+            ac_prime = np.reshape(expert.get_action()[0], (1, -1))
+            ob_, rew, new, _ = env.step(ac_prime[0])
+            ob = ob_["image"]
+            state = ob_["state"]
+
+            option_prime = ob_["option"][0]
+            if new:
+                expert.reset()
+            # sample = expert.sample(1)
+            # ob_, rew, new, _ = sample.observations, \
+            #     float(sample.rewards.detach().cpu().numpy()[0][0]), \
+            #     bool(sample.dones.detach().cpu().numpy()[0][0]), None
+            # ob = np.transpose(ob_["image"].detach().cpu().numpy()[0], (1, 2, 0))
+            # state = ob_["state"].detach().cpu().numpy()[0]
+            # option = ob_["option"].detach().cpu().numpy()[0][0].astype(np.int64)
+            # ac = sample.actions.detach().cpu().numpy()
             opts[i] = option
             acs[i] = ac
         ob = stack_state(ob, state)
@@ -153,7 +160,6 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
 
         if epoch:
             env.render()
-        # env.render()
 
         curr_opt_duration += 1
         term = pi.get_term([ob],[option])[0][0]
@@ -598,6 +604,7 @@ def learn(env, policy_func, *,
         rewbuffer.extend(rews)
         logger.record_tabular("EpLenMean", np.mean(lenbuffer))
         logger.record_tabular("EpRewMean", np.mean(rewbuffer))
+        logger.record_tabular("EpBetaMean", np.mean(seg["last_betas"]))
         logger.record_tabular("EpThisIter", len(lens))
         episodes_so_far += len(lens)
         timesteps_so_far += sum(lens)

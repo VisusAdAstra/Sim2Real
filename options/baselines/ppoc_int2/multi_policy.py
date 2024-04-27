@@ -35,24 +35,23 @@ class MultiPolicy(object):
         sequence_length = None
 
         ob = U.get_placeholder(name="ob", dtype=tf.float32, shape=[sequence_length] + list(ob_space["image"].shape))
-        #state = tf.compat.v1.placeholder(name="state", dtype=tf.float32, shape=[sequence_length])
         option = U.get_placeholder(name="option", dtype=tf.int32, shape=[None])
 
         x = ob / 255.0
-        x2 = tf.identity(x)
-        state = tf.concat((x2[:,0,0], x2[:,0,-1], x2[:,-1,0], x2[:,-1,-1]), axis = -1)
+        #x2 = tf.identity(x)
+        #state = tf.concat((x2[:,0,0], x2[:,0,-1], x2[:,-1,0], x2[:,-1,-1]), axis = -1)
         if kind == 'small':  # from A3C paper
             x = tf.nn.relu(U.conv2d(x, 16, "l1", [8, 8], [4, 4], pad="VALID"))
             x = tf.nn.relu(U.conv2d(x, 32, "l2", [4, 4], [2, 2], pad="VALID"))
             x = U.flattenallbut0(x)
-            x = tf.concat((x, state), axis = -1)
+            #x = tf.concat((x, state), axis = -1)
             hidden = tf.nn.relu(tf.compat.v1.layers.dense(x, 256, name='lin', kernel_initializer=U.normc_initializer(1.0)))
         elif kind == 'large':  # Nature DQN
             x = tf.nn.relu(U.conv2d(x, 32, "l1", [8, 8], [4, 4], pad="VALID"))
             x = tf.nn.relu(U.conv2d(x, 64, "l2", [4, 4], [2, 2], pad="VALID"))
             x = tf.nn.relu(U.conv2d(x, 64, "l3", [3, 3], [1, 1], pad="VALID"))
             x = U.flattenallbut0(x)
-            x = tf.concat((x, state), axis = -1)
+            #x = tf.concat((x, state), axis = -1)
             hidden = tf.nn.relu(tf.compat.v1.layers.dense(x, 512, name='lin', kernel_initializer=U.normc_initializer(1.0)))
         else:
             raise NotImplementedError
