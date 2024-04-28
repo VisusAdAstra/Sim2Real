@@ -16,6 +16,8 @@ import gym
 import matplotlib.pyplot as plt
 
 
+eta = 1.0
+
 def stack_state(ob, state):
     ob = ob.astype(float)
     state = np.resize(state, (12,))
@@ -27,7 +29,7 @@ def stack_state(ob, state):
 
 def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,results,rewbuffer,dc,epoch,seed,plots, w_intfc,switch,expert=None):
     t = 0
-    eta = 0.8
+    global eta
     run = False
     ac = env.action_space.sample() # not used, just so we have the datatype
     new = True # marks if we're on first timestep of an episode
@@ -55,9 +57,11 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
     realrews = np.zeros(horizon, 'float32')
     news = np.zeros(horizon, 'int32')
     opts = np.zeros(horizon, 'int32')
+    opts_prime = np.zeros(horizon, 'int32')
 
     last_options=np.zeros(horizon, 'int32')
     acs = np.array([ac for _ in range(horizon)])
+    acs_prime = np.array([ac for _ in range(horizon)])
     prevacs = acs.copy()
 
     arbitrary_option=0
@@ -92,7 +96,7 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
 
 
             yield {"ob" : obs, "rew" : rews, "realrew": realrews, "vpred" : vpreds, "op_vpred": op_vpreds, "new" : news,
-                    "ac" : acs, "opts" : opts, "prevac" : prevacs, "nextvpred": vpred * (1 - new), "nextop_vpred": op_vpred * (1 - new),
+                    "ac" : acs, "ac_prime" : acs_prime, "opts_prime" : opts_prime, "opts" : opts, "prevac" : prevacs, "nextvpred": vpred * (1 - new), "nextop_vpred": op_vpred * (1 - new),
                     "ep_rets" : ep_rets, "ep_lens" : ep_lens, 'term_p': term_ps, 'next_term_p':term_p,
                      "opt_dur": opt_duration, "op_probs":op_probs, "last_betas":last_betas, "intfc":intfc}
             # Be careful!!! if you change the downstream algorithm to aggregate
@@ -152,8 +156,8 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
             # state = ob_["state"].detach().cpu().numpy()[0]
             # option = ob_["option"].detach().cpu().numpy()[0][0].astype(np.int64)
             # ac = sample.actions.detach().cpu().numpy()
-            opts[i] = option
-            acs[i] = ac
+            opts_prime[i] = option_prime
+            acs_prime[i] = ac_prime
         ob = stack_state(ob, state)
         rews[i] = rew
         realrews[i] = rew
@@ -287,7 +291,7 @@ def learn(env, policy_func, *,
         dc=0,plots=False,w_intfc=True,switch=False,intlr=1e-4,piolr=1e-4,fewshot=False,expert=None
         ):
 
-
+    global eta
     optim_batchsize_ideal = optim_batchsize 
     np.random.seed(seed)
     tf.compat.v1.set_random_seed(seed)
@@ -336,11 +340,13 @@ def learn(env, policy_func, *,
 
     ob = U.get_placeholder_cached(name="ob")
     option = U.get_placeholder_cached(name="option")
+    option_prime = tf.compat.v1.placeholder(dtype=tf.int32, shape=[None])
     term_adv = U.get_placeholder(name='term_adv', dtype=tf.float32, shape=[None])
     op_adv = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None]) # Target advantage function (if applicable)
     betas = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None]) # Empirical return
 
     ac = pi.pdtype.sample_placeholder([None])
+    ac_prime = pi.pdtype.sample_placeholder([None])
 
     kloldnew = oldpi.pd.kl(pi.pd)
     ent = pi.pd.entropy()
@@ -354,11 +360,11 @@ def learn(env, policy_func, *,
     pol_surr = - U.mean(tf.minimum(surr1, surr2)) # PPO's pessimistic surrogate (L^CLIP)
 
     vf_loss = U.mean(tf.square(pi.vpred - ret))
-    total_loss = pol_surr + pol_entpen + vf_loss
+    total_loss = (1-eta)*(pol_surr + pol_entpen + vf_loss) + eta*(-U.mean(tf.square(ac - ac_prime)))
     losses = [pol_surr, pol_entpen, vf_loss, meankl, meanent]
     loss_names = ["pol_surr", "pol_entpen", "vf_loss", "kl", "ent"]
 
-    term_loss = pi.tpred * term_adv
+    term_loss = (1-eta)*pi.tpred * term_adv + eta*tf.reduce_mean(input_tensor=tf.cast(tf.equal(option, option_prime),tf.float32))
 
     # pi_w = tf.stop_gradient(pi.op_pi)
     pi_w = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None,num_options])
@@ -375,14 +381,14 @@ def learn(env, policy_func, *,
     log_pi = tf.math.log(tf.clip_by_value(pi.op_pi, 1e-20, 1.0))
     op_entropy = -tf.reduce_mean(input_tensor=pi.op_pi * log_pi, axis=1)
     op_loss -= 0.01*tf.reduce_sum(input_tensor=op_entropy)
-
+    op_loss = (1-eta)*op_loss - eta*tf.reduce_mean(input_tensor=tf.cast(tf.equal(option, option_prime),tf.float32))
 
 
     var_list = pi.get_trainable_variables()
-    lossandgrad = U.function([ob, ac, atarg, ret, lrmult, option], losses + [U.flatgrad(total_loss, var_list)])
+    lossandgrad = U.function([ob, ac, ac_prime, atarg, ret, lrmult, option], losses + [U.flatgrad(total_loss, var_list)])
     lossandgrad_vf = U.function([ob, ac, atarg, ret, lrmult, option], losses + [U.flatgrad(vf_loss, var_list)])
-    termgrad = U.function([ob, option, term_adv], [U.flatgrad(term_loss, var_list)]) # Since we will use a different step size.
-    opgrad = U.function([ob, option, betas, op_adv, intfc], [U.flatgrad(op_loss, var_list)]) # Since we will use a different step size.
+    termgrad = U.function([ob, option, option_prime, term_adv], [U.flatgrad(term_loss, var_list)]) # Since we will use a different step size.
+    opgrad = U.function([ob, option, option_prime, betas, op_adv, intfc], [U.flatgrad(op_loss, var_list)]) # Since we will use a different step size.
     intgrad = U.function([ob, option, betas, op_adv, pi_w], [U.flatgrad(int_loss, var_list)]) # Since we will use a different step size.
     adam = MpiAdam(var_list, epsilon=adam_epsilon)
 
@@ -482,7 +488,7 @@ def learn(env, policy_func, *,
         print("mean vpreds:", np.mean(np.array(seg['vpred']),axis=0))
        
 
-        ob, ac, opts, atarg, tdlamret = seg["ob"], seg["ac"], seg["opts"], seg["adv"], seg["tdlamret"]
+        ob, ac, ac_prime, opts, atarg, tdlamret = seg["ob"], seg["ac"], seg["ac_prime"], seg["opts"], seg["adv"], seg["tdlamret"]
         vpredbefore = seg["vpred"] # predicted value function before udpate
         atarg = (atarg - atarg.mean()) / atarg.std() # standardized advantage function estimate
 
@@ -513,7 +519,7 @@ def learn(env, policy_func, *,
             ########## This part is only necessary when we use options. We proceed to these verifications in order not to discard any collected trajectories.
             if datas[opt] != 0:
                 if (indices.size < min_batch and datas[opt].n > min_batch): 
-                    datas[opt] = Dataset(dict(ob=ob[indices], ac=ac[indices], atarg=atarg[indices], vtarg=tdlamret[indices]), shuffle=not pi.recurrent)
+                    datas[opt] = Dataset(dict(ob=ob[indices], ac=ac[indices], ac_prime=ac_prime[indices], atarg=atarg[indices], vtarg=tdlamret[indices]), shuffle=not pi.recurrent)
                     t_advs[opt].append(0.)
                     continue 
                     # The preivous dataset has already been trained on (datas[opt].n > min_batch), so we replace it,
@@ -525,9 +531,10 @@ def learn(env, policy_func, *,
                     oldmap = datas[opt].data_map
                     cat_ob = np.concatenate((oldmap['ob'],ob[indices]))
                     cat_ac = np.concatenate((oldmap['ac'],ac[indices]))
+                    cat_ac_prime = np.concatenate((oldmap['ac_prime'],ac[indices]))
                     cat_atarg = np.concatenate((oldmap['atarg'],atarg[indices]))
                     cat_vtarg = np.concatenate((oldmap['vtarg'],tdlamret[indices]))
-                    datas[opt] = Dataset(dict(ob=cat_ob, ac=cat_ac, atarg=cat_atarg, vtarg=cat_vtarg), shuffle=not pi.recurrent)
+                    datas[opt] = Dataset(dict(ob=cat_ob, ac=cat_ac, ac_prime=cat_ac_prime, atarg=cat_atarg, vtarg=cat_vtarg), shuffle=not pi.recurrent)
                     t_advs[opt].append(0.)
                     continue
                     # The preivous dataset hasn't been trained on (datas[opt].n < min_batch), so we concatenante with new samples.
@@ -539,21 +546,22 @@ def learn(env, policy_func, *,
                     oldmap = datas[opt].data_map
                     cat_ob = np.concatenate((oldmap['ob'],ob[indices]))
                     cat_ac = np.concatenate((oldmap['ac'],ac[indices]))
+                    cat_ac_prime = np.concatenate((oldmap['ac_prime'],ac[indices]))
                     cat_atarg = np.concatenate((oldmap['atarg'],atarg[indices]))
                     cat_vtarg = np.concatenate((oldmap['vtarg'],tdlamret[indices]))
-                    datas[opt] = d = Dataset(dict(ob=cat_ob, ac=cat_ac, atarg=cat_atarg, vtarg=cat_vtarg), shuffle=not pi.recurrent)
+                    datas[opt] = d = Dataset(dict(ob=cat_ob, ac=cat_ac, ac_prime=cat_ac_prime, atarg=cat_atarg, vtarg=cat_vtarg), shuffle=not pi.recurrent)
                     # The preivous dataset hasn't been trained on (datas[opt].n < min_batch), so we concatenante with new samples.
                     # The combination of both (indices.size + datas[opt].n < min_batch) is sufficient for training.
 
                 ##################################################
                 if (indices.size > min_batch and datas[opt].n > min_batch):
-                    datas[opt] = d = Dataset(dict(ob=ob[indices], ac=ac[indices], atarg=atarg[indices], vtarg=tdlamret[indices]), shuffle=not pi.recurrent)
+                    datas[opt] = d = Dataset(dict(ob=ob[indices], ac=ac[indices], ac_prime=ac_prime[indices], atarg=atarg[indices], vtarg=tdlamret[indices]), shuffle=not pi.recurrent)
                     # The preivous dataset has already been trained on (datas[opt].n > min_batch), so we replace it.
                     # The new samples are numerous enough (indices.size > min_batch), so we use them for training.        
 
                 ##################################################
             elif datas[opt] == 0: 
-                datas[opt] = d = Dataset(dict(ob=ob[indices], ac=ac[indices], atarg=atarg[indices], vtarg=tdlamret[indices]), shuffle=not pi.recurrent)
+                datas[opt] = d = Dataset(dict(ob=ob[indices], ac=ac[indices], ac_prime=ac_prime[indices], atarg=atarg[indices], vtarg=tdlamret[indices]), shuffle=not pi.recurrent)
                 # Only useful for the very first iteration of the training process.
             #########
 
@@ -574,7 +582,7 @@ def learn(env, policy_func, *,
                     # tadv = tadv if num_options > 1 else np.zeros_like(tadv)
                     # t_advs[opt].append(nodc_adv)
                     if iters_so_far<150 or not fewshot:
-                        *newlosses, grads = lossandgrad(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"], cur_lrmult, [opt])
+                        *newlosses, grads = lossandgrad(batch["ob"], batch["ac"], batch["ac_prime"], batch["atarg"], batch["vtarg"], cur_lrmult, [opt])
                         adam.update(grads, optim_stepsize * cur_lrmult)
                         losses.append(newlosses)
                     else:
@@ -585,7 +593,7 @@ def learn(env, policy_func, *,
 
 
         if iters_so_far<150 or not fewshot:
-            termg = termgrad(seg["ob"], seg['opts'], seg["op_adv"])[0]
+            termg = termgrad(seg["ob"], seg['opts'], seg['opts_prime'], seg["op_adv"])[0]
             adam.update(termg, 5e-7)
 
             if w_intfc:
@@ -593,7 +601,7 @@ def learn(env, policy_func, *,
                 adam.update(intgrads, intlr)
 
         #opgrad = intgrad(seg['ob'],seg['opts'], seg["last_betas"], seg["op_adv"], seg["intfc"])[0] #wrong
-        opgrads = opgrad(seg['ob'],seg['opts'], seg["last_betas"], seg["op_adv"], seg["intfc"])[0]
+        opgrads = opgrad(seg['ob'], seg['opts'], seg['opts_prime'], seg["last_betas"], seg["op_adv"], seg["intfc"])[0]
         adam.update(opgrads, piolr)
 
 
