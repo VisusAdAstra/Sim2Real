@@ -104,7 +104,7 @@ class Widow250PickPlaceEnv(Widow250Env):
 
     def get_reward(self, info):
         if self.reward_type == 'pick_place':
-            reward = 0. #-1.
+            reward = -1. #0.
             if not self.picked and not self.placed:
                 if(info['grasp_success_target']):
                     reward = 50.

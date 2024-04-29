@@ -326,7 +326,7 @@ class Widow250Env(gym.Env, Serializable):
                 #'object_position': object_position,
                 #'object_orientation': object_orientation,
                 'state': np.concatenate(
-                    (ee_pos, ee_quat, gripper_state, gripper_binary_state)),
+                    (ee_pos, ee_quat, gripper_state, gripper_binary_state, object_position, object_orientation)),
                 'image': image_observation,
                 'achieved_goal': np.copy(self.state),
                 'desired_goal' : np.copy(self.goal),
@@ -395,7 +395,7 @@ class Widow250Env(gym.Env, Serializable):
             img_space = gym.spaces.Box(0, 255, (*self.image_length,), dtype=np.uint8)
             robot_state_dim = 10  # XYZ + QUAT + GRIPPER_STATE
             obs_bound = 100
-            obs_high = np.ones(robot_state_dim) * obs_bound
+            obs_high = np.ones(robot_state_dim + 7) * obs_bound
             state_space = gym.spaces.Box(-obs_high, obs_high)
             object_position = gym.spaces.Box(-np.ones(3), np.ones(3))
             object_orientation = gym.spaces.Box(-np.ones(4), np.ones(4))

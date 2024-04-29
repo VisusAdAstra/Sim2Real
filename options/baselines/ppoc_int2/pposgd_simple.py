@@ -20,11 +20,13 @@ eta = 1.0
 
 def stack_state(ob, state):
     ob = ob.astype(float)
-    state = np.resize(state, (12,))
-    ob[0][0] = np.clip(state[:3]*255, a_min=-255., a_max=255.)
-    ob[0][-1] = np.clip(state[3:6]*255, a_min=-255., a_max=255.)
-    ob[-1][0] = np.clip(state[6:9]*255, a_min=-255., a_max=255.)
-    ob[-1][-1] = np.clip(state[9:]*255, a_min=-255., a_max=255.)
+    state = np.resize(state, (18,))
+    ob[0][0] = state[:3]
+    ob[0][1] = state[3:6]
+    ob[1][0] = state[6:9]
+    ob[-1][-1] = state[9:12]
+    ob[-2][-1] = state[12:15]
+    ob[-1][-2] = state[15:]
     return ob
 
 def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,results,rewbuffer,dc,epoch,seed,plots, w_intfc,switch,expert=None):
@@ -79,7 +81,7 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
 
     value_val=[]
     opt_duration = [[] for _ in range(num_options)]
-
+    opt_count = [0] * num_options
     curr_opt_duration = 0.
     while True:
         prevac = ac
@@ -97,7 +99,7 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
 
             yield {"ob" : obs, "rew" : rews, "realrew": realrews, "vpred" : vpreds, "op_vpred": op_vpreds, "new" : news,
                     "ac" : acs, "ac_prime" : acs_prime, "opts_prime" : opts_prime, "opts" : opts, "prevac" : prevacs, "nextvpred": vpred * (1 - new), "nextop_vpred": op_vpred * (1 - new),
-                    "ep_rets" : ep_rets, "ep_lens" : ep_lens, 'term_p': term_ps, 'next_term_p':term_p,
+                    "ep_rets" : ep_rets, "ep_lens" : ep_lens, 'term_p': term_ps, 'next_term_p':term_p, "opt_count": opt_count,
                      "opt_dur": opt_duration, "op_probs":op_probs, "last_betas":last_betas, "intfc":intfc}
             # Be careful!!! if you change the downstream algorithm to aggregate
             # several of these batches, then be sure to do a deepcopy
@@ -105,6 +107,7 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
             ep_lens = []
             value_val=[]
             opt_duration = [[] for _ in range(num_options)]
+            opt_count = [0] * num_options
             curr_opt_duration = 0.
             iters_so_far+=1
             first_ep=True
@@ -120,8 +123,7 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
             ################################
             if iters_so_far%2 == 0:
                 eta *= 0.99
-            run = np.random.rand()>eta
-            print("run:", run, eta)
+            print("eta:", eta)
 
         i = t % horizon
         obs[i] = ob
@@ -132,7 +134,8 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
         acs[i] = ac
         prevacs[i] = prevac
 
-        if np.random.rand()>eta:
+        run = np.random.rand()>eta
+        if run:
             ob_, rew, new, _ = env.step(ac[0])
             ob = ob_["image"]
             state = ob_["state"]
@@ -158,7 +161,7 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
             # ac = sample.actions.detach().cpu().numpy()
             opts_prime[i] = option_prime
             acs_prime[i] = ac_prime
-        ob = stack_state(ob, state)
+        #ob = stack_state(ob, state)
         rews[i] = rew
         realrews[i] = rew
 
@@ -166,14 +169,25 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
             env.render()
 
         curr_opt_duration += 1
-        term = pi.get_term([ob],[option])[0][0]
-        if term:
+        if run:
+            term = pi.get_term([ob],[option])[0][0]
+            if term:
+                if num_options > 1:
+                    rews[i] -= dc            
+                opt_duration[option].append(curr_opt_duration)
+                curr_opt_duration = 0.
+                last_option=option
+                option = pi.get_option(ob)
+                if epoch:
+                    option=arbitrary_option
+        elif option != option_prime:
             if num_options > 1:
                 rews[i] -= dc            
             opt_duration[option].append(curr_opt_duration)
+            opt_count[option] += 1
             curr_opt_duration = 0.
             last_option=option
-            option = pi.get_option(ob)
+            option = option_prime
             if epoch:
                 option=arbitrary_option
 
@@ -306,21 +320,19 @@ def learn(env, policy_func, *,
     gamename += 'seed' + str(seed)
     gamename += app 
 
-    dirname = '{}_{}opts_saves/'.format(gamename,num_options)
+    dirname = './options/.log/{}_{}opts_saves/'.format(gamename,num_options)
 
     if wsaves:
         first=True
         if not os.path.exists(dirname):
             os.makedirs(dirname)
             first = False
-        # while os.path.exists(dirname) and first:
-        #     dirname += '0'
 
-        files = ['pposgd_simple.py','cnn_policy.py','run_miniw.py']
-        for i in range(len(files)):
-            src = os.path.expanduser('~/miniworld2/baselines/ppoc_int2/') + files[i]
-            dest = os.path.expanduser('~/miniworld2/baselines/ppoc_int2/') + dirname
-            shutil.copy2(src,dest)
+        # files = ['pposgd_simple.py','cnn_policy.py','run_miniw.py']
+        # for i in range(len(files)):
+        #     src = os.path.expanduser('~/miniworld2/baselines/ppoc_int2/') + files[i]
+        #     dest = os.path.expanduser('~/miniworld2/baselines/ppoc_int2/') + dirname
+        #     shutil.copy2(src,dest)
     ###
 
 
@@ -407,14 +419,14 @@ def learn(env, policy_func, *,
     ### More book-kepping
     results=[]
     if saves:
-        directory_res = "res_switch150/learnpio/lr{}/".format(optim_stepsize) if not fewshot else "res_fewshot/lr{}/".format(optim_stepsize)
+        directory_res = "./options/.log/res/opt{}/".format(num_options) if not fewshot else "../../.log/res_fewshot/opt{}/".format(num_options) 
         if not os.path.exists(directory_res):
             os.makedirs(directory_res)       
         if w_intfc: 
             results = open(directory_res + gamename +'_intfc{}_intlr{}_piolr{}'.format(int(w_intfc),intlr,piolr) + '_'+str(num_options)+'opts.csv','w')
         else:
             results = open(directory_res + gamename +'_intfc{}_piolr{}'.format(int(w_intfc),piolr) + '_'+str(num_options)+'opts.csv','w')
-        out = 'epoch,avg_reward'
+        out = 'epoch,avg_reward,opt_duration,opt_count'
 
         # for opt in range(num_options): out += ',option {} dur'.format(opt)
         # # for opt in range(num_options): out += ',option {} std'.format(opt)
@@ -625,12 +637,14 @@ def learn(env, policy_func, *,
 
         ### Book keeping
         if saves:
-            out = "{},{}"
+            out = "{},{},{},{}"
             # for _ in range(num_options): out+=",{},{},{}"
             out+="\n"
+            opt_duration = [sum(i) for i in seg["opt_dur"]]
+            opt_count = seg["opt_count"]
             # pdb.set_trace()
 
-            info = [iters_so_far, np.mean(rewbuffer)]
+            info = [iters_so_far, np.mean(rewbuffer),opt_duration,opt_count]
 
             results.write(out.format(*info))
             results.flush()
