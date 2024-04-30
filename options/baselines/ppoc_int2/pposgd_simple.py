@@ -16,7 +16,7 @@ import gym
 import matplotlib.pyplot as plt
 
 
-eta = 1.0
+eta = 0.1
 
 def stack_state(ob, state):
     ob = ob.astype(float)
@@ -165,8 +165,8 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
         rews[i] = rew
         realrews[i] = rew
 
-        if epoch:
-            env.render()
+        # if epoch:
+        #     env.render()
 
         curr_opt_duration += 1
         if run:
