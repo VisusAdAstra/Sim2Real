@@ -21,6 +21,7 @@ eta = 0.1
 def stack_state(ob, state):
     ob = ob.astype(float)
     state = np.resize(state, (18,))
+    state = (state+1)*127.5
     ob[0][0] = state[:3]
     ob[0][1] = state[3:6]
     ob[1][0] = state[6:9]
@@ -161,7 +162,7 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
             # ac = sample.actions.detach().cpu().numpy()
             opts_prime[i] = option_prime
             acs_prime[i] = ac_prime
-        #ob = stack_state(ob, state)
+        ob = stack_state(ob, state)
         rews[i] = rew
         realrews[i] = rew
 
@@ -169,27 +170,27 @@ def traj_segment_generator(pi, env, horizon, stochastic, num_options,saves,resul
         #     env.render()
 
         curr_opt_duration += 1
-        if run:
-            term = pi.get_term([ob],[option])[0][0]
-            if term:
-                if num_options > 1:
-                    rews[i] -= dc            
-                opt_duration[option].append(curr_opt_duration)
-                curr_opt_duration = 0.
-                last_option=option
-                option = pi.get_option(ob)
-                if epoch:
-                    option=arbitrary_option
-        elif option != option_prime:
+        term = pi.get_term([ob],[option])[0][0]
+        if term:
             if num_options > 1:
                 rews[i] -= dc            
             opt_duration[option].append(curr_opt_duration)
             opt_count[option] += 1
             curr_opt_duration = 0.
             last_option=option
-            option = option_prime
+            option = pi.get_option(ob)
             if epoch:
                 option=arbitrary_option
+        # elif option != option_prime:
+        #     if num_options > 1:
+        #         rews[i] -= dc            
+        #     opt_duration[option].append(curr_opt_duration)
+        #     opt_count[option] += 1
+        #     curr_opt_duration = 0.
+        #     last_option=option
+        #     option = option_prime
+        #     if epoch:
+        #         option=arbitrary_option
 
         ep_states[option].append(ob)
 

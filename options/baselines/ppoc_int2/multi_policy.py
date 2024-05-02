@@ -37,23 +37,23 @@ class MultiPolicy(object):
         ob = U.get_placeholder(name="ob", dtype=tf.float32, shape=[sequence_length] + list(ob_space["image"].shape))
         option = U.get_placeholder(name="option", dtype=tf.int32, shape=[None])
 
-        # state = tf.identity(ob)
-        # state = tf.concat((state[:,0,0], state[:,0,1], state[:,1,0], \
-        #                    state[:,-1,-1], state[:,-2,-1], state[:,-1,-2]), axis = -1)
         x = ob / 255.0
+        state = tf.identity(x)
+        state = tf.concat(values=[state[:,0,0], state[:,0,1], state[:,1,0], \
+                           state[:,-1,-1], state[:,-2,-1], state[:,-1,-2]], axis = -1)
         if kind == 'small':  # from A3C paper
             x = tf.nn.relu(U.conv2d(x, 16, "l1", [8, 8], [4, 4], pad="VALID"))
             x = tf.nn.relu(U.conv2d(x, 32, "l2", [4, 4], [2, 2], pad="VALID"))
             x = U.flattenallbut0(x)
-            #x = tf.concat((x, state), axis = -1)
+            x = tf.concat((x, state), axis = -1)
             hidden = tf.nn.relu(tf.compat.v1.layers.dense(x, 256, name='lin', kernel_initializer=U.normc_initializer(1.0)))
         elif kind == 'large':  # Nature DQN
             x = tf.nn.relu(U.conv2d(x, 32, "l1", [8, 8], [4, 4], pad="VALID"))
             x = tf.nn.relu(U.conv2d(x, 64, "l2", [4, 4], [2, 2], pad="VALID"))
             x = tf.nn.relu(U.conv2d(x, 64, "l3", [3, 3], [1, 1], pad="VALID"))
             x = U.flattenallbut0(x)
-            #x = tf.concat((x, state), axis = -1)
-            hidden = tf.nn.relu(tf.compat.v1.layers.dense(x, 512, name='lin', kernel_initializer=U.normc_initializer(1.0)))
+            hidden = tf.nn.relu(tf.compat.v1.layers.dense(x, 494, name='lin', kernel_initializer=U.normc_initializer(1.0)))
+            hidden = tf.concat(values=[hidden, state], axis = -1)
         else:
             raise NotImplementedError
 
@@ -141,10 +141,10 @@ class MultiPolicy(object):
         else:
             pi_I = op_prob
 
-        if np.isnan(pi_I[0]).any():
-            return np.random.choice(range(len(op_prob[0])))
-        else:
-            return np.random.choice(range(len(op_prob[0])), p=pi_I[0])
+        #if np.isnan(pi_I[0]).any():
+        #    return np.random.choice(range(len(op_prob[0])))
+
+        return np.random.choice(range(len(op_prob[0])), p=pi_I[0])
 
 
     def get_variables(self):
