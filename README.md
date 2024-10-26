@@ -1,4 +1,4 @@
-# roboverse
+# Robot control with options using roboverse
 A set of environments utilizing [pybullet](https://github.com/bulletphysics/bullet3) for simulation of robotic manipulation tasks. 
 
 ## Usage
